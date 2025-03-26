@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人工智慧測驗</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .quiz-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        h2 {
+            color: #3498db;
+        }
+        .question {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .options {
+            margin-bottom: 20px;
+        }
+        .option {
+            display: block;
+            padding: 10px 15px;
+            margin: 8px 0;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .option:hover {
+            background-color: #e0e0e0;
+        }
+        .correct {
+            background-color: #aaf0aa !important;
+        }
+        .incorrect {
+            background-color: #ffaaaa !important;
+        }
+        .feedback {
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            margin-top: 10px;
+        }
+        .correct-feedback {
+            background-color: #dfffdf;
+            border: 1px solid #88cc88;
+        }
+        .incorrect-feedback {
+            background-color: #ffe6e6;
+            border: 1px solid #cc8888;
+        }
+        .next-btn {
+            display: none;
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+        .next-btn:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+        .progress {
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+        }
+        .explanation {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>人工智慧測驗</h1>
+    <div class="progress">題目 <span id="current-question">1</span> / <span id="total-questions">10</span></div>
+    <div class="quiz-container">
+        <div id="question-container" class="question"></div>
+        <div id="options-container" class="options"></div>
+        <div id="explanation" class="explanation"></div>
+        <div id="feedback" class="feedback"></div>
+        <button id="next-btn" class="next-btn">下一題</button>
+    </div>
+    <div id="result" class="result"></div>
+
+    <script>
+        // 題目和答案數據
+        const questions = [
+            {
+                question: "AI在近年引起了熱潮，也促使人們開始學習與AI進行「對話」，故人們首先應學著?",
+                options: [
+                    "A. 定義好問題",
+                    "B. 蒐集大數據",
+                    "C. 設計演算法",
+                    "D. 寫程式"
+                ],
+                correctAnswer: "A",
+                explanation: "與AI進行有效對話的第一步是定義好問題。清晰的問題定義能夠幫助AI更好地理解用戶意圖，提供更準確的回答。在學習與AI對話時，首先需要學會如何準確表達自己的需求，而不是先學習數據收集、演算法設計或編程。"
+            },
+            {
+                question: "AI是實際運用機器學習代理人類處理問題的一種方式；因此，通常需要針對「輸入」與「輸出」建立一套供其學習的「」?",
+                options: [
+                    "A. 實數",
+                    "B. 函數",
+                    "C. 基數",
+                    "D. 浮點數"
+                ],
+                correctAnswer: "B",
+                explanation: "AI系統需要建立輸入與輸出之間的映射關係，這種映射關係在數學上即是函數。機器學習本質上是透過大量數據訓練，找到一個能夠將輸入準確映射到期望輸出的函數模型。"
+            },
+            {
+                question: "現下的潮流「深度學習」，經常採用的機器學習方式為何?",
+                options: [
+                    "A. 問題導向式學習",
+                    "B. 非監督式學習",
+                    "C. 監督式學習",
+                    "D. 引導式學習"
+                ],
+                correctAnswer: "B",
+                explanation: "深度學習中常採用非監督式學習，讓AI系統自行從未標記的數據中識別模式和結構。非監督式學習使AI能夠發現數據中的隱藏關係，尤其在大規模數據集上表現優異，是深度學習的重要方法之一。"
+            },
+            {
+                question: "何者非本節所曾提及的機器學習演算法?",
+                options: [
+                    "A. 支援向量機",
+                    "B. 線性分類器",
+                    "C. K-NN",
+                    "D. 粒子群演算法"
+                ],
+                correctAnswer: "D",
+                explanation: "在本節提及的機器學習演算法中，支援向量機、線性分類器和K-NN都是常見的分類演算法。粒子群演算法屬於演化計算領域，主要用於優化問題，而非直接作為機器學習的核心演算法。"
+            },
+            {
+                question: "下列何者非決策樹演算法的主要名詞?",
+                options: [
+                    "A. 樹根",
+                    "B. 子節點",
+                    "C. 二元樹",
+                    "D. 樹頂"
+                ],
+                correctAnswer: "D",
+                explanation: "決策樹演算法的主要名詞包括樹根(root)、子節點(child node)和二元樹(binary tree)等。「樹頂」不是決策樹中的標準術語，正確的術語應為「根節點」或「樹根」，用來表示決策樹的頂部起始點。"
+            },
+            {
+                question: "在案例式推論系統中，最典型的演算法為何?",
+                options: [
+                    "A. S-NN",
+                    "B. M-NN",
+                    "C. K-NN",
+                    "D. L-NN"
+                ],
+                correctAnswer: "C",
+                explanation: "案例式推論系統（Case-Based Reasoning）中最典型的演算法是K-nearest neighbors (K-NN)。K-NN通過比較新案例與已知案例的相似度，找出最相似的K個案例，進而進行分類或預測，這與案例式推論的核心思想相符。"
+            },
+            {
+                question: "下列何者非工業4.0的主要應用範疇?",
+                options: [
+                    "A. 物聯網",
+                    "B. 人工智慧",
+                    "C. 雲端運算",
+                    "D. 消費者行為"
+                ],
+                correctAnswer: "D",
+                explanation: "工業4.0的主要應用範疇包括物聯網、人工智慧和雲端運算，這些技術共同支撐了智慧工廠的運作。消費者行為雖然是市場營銷領域的重要概念，但不屬於工業4.0的核心應用範疇。"
+            },
+            {
+                question: "下列何者非物聯網的主要架構成員?",
+                options: [
+                    "A. 應用層",
+                    "B. 虛擬層",
+                    "C. 網路層",
+                    "D. 感知層"
+                ],
+                correctAnswer: "B",
+                explanation: "物聯網的主要架構通常包括感知層（負責數據收集）、網路層（負責數據傳輸）和應用層（負責數據處理和應用）。「虛擬層」不是物聯網架構的標準組成部分。"
+            },
+            {
+                question: "下列何者非雲端運算的主要服務模式?",
+                options: [
+                    "A. 邊緣即服務",
+                    "B. 設備即服務",
+                    "C. 平台即服務",
+                    "D. 軟體即服務"
+                ],
+                correctAnswer: "A",
+                explanation: "雲端運算的主要服務模式包括軟體即服務(SaaS)、平台即服務(PaaS)和基礎設施即服務(IaaS)。「邊緣即服務」並非傳統雲端運算的標準服務模式，而是新興概念或邊緣計算的延伸應用。"
+            },
+            {
+                question: "在本節引述的專家系統實例中，所採用的智慧製造演算法為何?",
+                options: [
+                    "A. 支援向量機",
+                    "B. 線性分類器",
+                    "C. K-NN",
+                    "D. 粒子群演算法"
+                ],
+                correctAnswer: "C",
+                explanation: "在本節討論的專家系統實例中，K-NN（K-近鄰演算法）被用作智慧製造的核心演算法。K-NN能夠基於相似案例進行決策，非常適合專家系統中的案例推理和模式識別，能夠有效處理複雜的製造場景中的分類和預測問題。"
+            }
+        ];
+
+        // 初始變數
+        let currentQuestionIndex = 0;
+        let score = 0;
+        const totalQuestions = questions.length;
+
+        // DOM元素
+        const questionContainer = document.getElementById("question-container");
+        const optionsContainer = document.getElementById("options-container");
+        const explanationContainer = document.getElementById("explanation");
+        const feedbackContainer = document.getElementById("feedback");
+        const nextButton = document.getElementById("next-btn");
+        const resultContainer = document.getElementById("result");
+        const currentQuestionElement = document.getElementById("current-question");
+        const totalQuestionsElement = document.getElementById("total-questions");
+
+        // 設置總題數
+        totalQuestionsElement.textContent = totalQuestions;
+
+        // 顯示題目函數
+        function displayQuestion() {
+            // 更新當前題目指示
+            currentQuestionElement.textContent = currentQuestionIndex + 1;
+            
+            // 獲取當前題目
+            const currentQuestion = questions[currentQuestionIndex];
+            
+            // 顯示題目文字
+            questionContainer.textContent = (currentQuestionIndex + 1) + ". " + currentQuestion.question;
+            
+            // 清空選項容器
+            optionsContainer.innerHTML = "";
+            
+            // 添加選項
+            currentQuestion.options.forEach(option => {
+                const optionElement = document.createElement("div");
+                optionElement.className = "option";
+                optionElement.textContent = option;
+                optionElement.addEventListener("click", function() {
+                    checkAnswer(option.charAt(0), this);
+                });
+                optionsContainer.appendChild(optionElement);
+            });
+            
+            // 重置反饋訊息
+            feedbackContainer.style.display = "none";
+            explanationContainer.style.display = "none";
+            nextButton.style.display = "none";
+        }
+
+        // 檢查答案函數
+        function checkAnswer(selectedOption, optionElement) {
+            // 禁用所有選項
+            const allOptions = document.querySelectorAll(".option");
+            allOptions.forEach(option => {
+                option.style.pointerEvents = "none";
+            });
+            
+            const currentQuestion = questions[currentQuestionIndex];
+            const correctOption = currentQuestion.correctAnswer;
+            
+            if (selectedOption === correctOption) {
+                // 答對
+                optionElement.classList.add("correct");
+                feedbackContainer.textContent = "恭喜！答案正確。";
+                feedbackContainer.className = "feedback correct-feedback";
+                feedbackContainer.style.display = "block";
+                score++;
+                
+                nextButton.style.display = "block";
+            } else {
+                // 答錯
+                optionElement.classList.add("incorrect");
+                
+                // 標示正確答案
+                allOptions.forEach(option => {
+                    if (option.textContent.charAt(0) === correctOption) {
+                        option.classList.add("correct");
+                    }
+                });
+                
+                feedbackContainer.textContent = "答案不正確。";
+                feedbackContainer.className = "feedback incorrect-feedback";
+                feedbackContainer.style.display = "block";
+                
+                // 顯示解析
+                explanationContainer.textContent = "解析: " + currentQuestion.explanation;
+                explanationContainer.style.display = "block";
+                
+                nextButton.style.display = "block";
+            }
+        }
+
+        // 下一題函數
+        function nextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < totalQuestions) {
+                displayQuestion();
+            } else {
+                // 測驗結束
+                showResult();
+            }
+        }
+
+        // 顯示結果函數
+        function showResult() {
+            document.querySelector(".quiz-container").style.display = "none";
+            document.querySelector(".progress").style.display = "none";
+            
+            const percentage = (score / totalQuestions) * 100;
+            resultContainer.innerHTML = `
+                <h2>測驗結束！</h2>
+                <p>你的得分: ${score} / ${totalQuestions} (${percentage.toFixed(2)}%)</p>
+                <button onclick="location.reload()">再測一次</button>
+            `;
+        }
+
+        // 綁定下一題按鈕事件
+        nextButton.addEventListener("click", nextQuestion);
+
+        // 開始顯示第一題
+        displayQuestion();
+    </script>
+</body>
+</html> 
