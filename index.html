@@ -416,6 +416,32 @@
         const chatInput = document.getElementById("chat-input");
         const aiSubmitButton = document.getElementById("ai-submit-btn");
 
+        // 嘗試從localStorage加載模型和設置
+        try {
+            const savedModels = localStorage.getItem('aiQuizModels');
+            if (savedModels) {
+                models = JSON.parse(savedModels);
+            }
+            
+            const savedModel = localStorage.getItem('aiQuizSelectedModel');
+            if (savedModel) {
+                selectedModel = savedModel;
+                selectedModelInput.value = savedModel;
+            }
+            
+            const savedApiKey = localStorage.getItem('aiQuizApiKey');
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+            }
+            
+            const savedBaseUrl = localStorage.getItem('aiQuizBaseUrl');
+            if (savedBaseUrl) {
+                baseUrlInput.value = savedBaseUrl;
+            }
+        } catch (e) {
+            console.error("無法從本地存儲加載設置:", e);
+        }
+
         // 設置總題數
         totalQuestionsElement.textContent = totalQuestions;
 
@@ -449,6 +475,9 @@
             explanationContainer.style.display = "none";
             nextButton.style.display = "none";
 
+            // 清空聊天記錄
+            chatMessages.innerHTML = "";
+            
             // 添加當前題目到AI聊天窗口
             addAIMessage(`當前題目: ${currentQuestion.question}
             
@@ -552,6 +581,21 @@ ${currentQuestion.options.join("\n")}`);
                     return;
                 }
                 
+                // 保存設置到localStorage
+                localStorage.setItem('aiQuizBaseUrl', baseUrl);
+                localStorage.setItem('aiQuizApiKey', apiKey);
+                
+                // 如果已經有模型列表，直接顯示
+                if (models && models.length > 0) {
+                    displayModels(models);
+                    modelList.style.display = 'block';
+                    return;
+                }
+                
+                // 顯示加載中...
+                modelItems.innerHTML = '<div class="model-item">加載中...</div>';
+                modelList.style.display = 'block';
+                
                 const response = await fetch(`${baseUrl}/models`, {
                     method: 'GET',
                     headers: {
@@ -567,11 +611,14 @@ ${currentQuestion.options.join("\n")}`);
                 const data = await response.json();
                 models = data.data || [];
                 
+                // 保存模型列表到localStorage
+                localStorage.setItem('aiQuizModels', JSON.stringify(models));
+                
                 displayModels(models);
-                modelList.style.display = 'block';
             } catch (error) {
                 console.error("獲取模型失敗:", error);
                 alert("獲取模型失敗: " + error.message);
+                modelItems.innerHTML = '<div class="model-item">獲取模型失敗</div>';
             }
         }
 
@@ -586,6 +633,7 @@ ${currentQuestion.options.join("\n")}`);
                 modelItem.addEventListener('click', () => {
                     selectedModel = model.id;
                     selectedModelInput.value = model.id;
+                    localStorage.setItem('aiQuizSelectedModel', model.id);
                     modelList.style.display = 'none';
                 });
                 modelItems.appendChild(modelItem);
@@ -653,8 +701,23 @@ ${currentQuestion.options.join("\n")}`);
                         messages: [
                             {
                                 role: "system",
-                                content: `你是一個AI教學助手，正在幫助用戶回答有關人工智慧的測驗題目。當前題目是: ${currentQuestion.question}
-選項: ${currentQuestion.options.join(" | ")}`
+                                content: `你是一位專業的教育助手，專注於幫助學習者理解人工智慧相關概念。
+
+你的角色：
+- 引導學習者思考，而非直接提供答案
+- 解釋相關概念和理論背景
+- 提供適當的例子幫助理解
+- 鼓勵批判性思考
+
+當前題目: ${currentQuestion.question}
+選項: ${currentQuestion.options.join(" | ")}
+
+請記住：
+1. 不要直接告訴用戶哪個選項是正確答案
+2. 引導他們理解每個選項背後的概念
+3. 提供相關的知識背景，幫助他們做出自己的判斷
+4. 如果用戶明確要求提示，可以給出思考方向，但不要直接給答案
+5. 保持專業且友善的態度`
                             },
                             {
                                 role: "user",
@@ -691,6 +754,14 @@ ${currentQuestion.options.join("\n")}`);
 
         // 綁定事件
         modelButton.addEventListener('click', fetchModels);
+        selectedModelInput.addEventListener('click', () => {
+            if (models && models.length > 0) {
+                displayModels(models);
+                modelList.style.display = 'block';
+            } else {
+                fetchModels();
+            }
+        });
         modelSearch.addEventListener('input', searchModels);
         
         aiSubmitButton.addEventListener('click', () => {
