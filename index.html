@@ -296,6 +296,23 @@
                 feedbackContainer.style.display = "block";
                 score++;
                 
+                // 添加查看解析按鈕
+                const viewExplanationBtn = document.createElement("button");
+                viewExplanationBtn.textContent = "查看解析";
+                viewExplanationBtn.className = "next-btn";
+                viewExplanationBtn.style.backgroundColor = "#27ae60";
+                viewExplanationBtn.style.marginRight = "10px";
+                viewExplanationBtn.addEventListener("click", function() {
+                    explanationContainer.textContent = "解析: " + currentQuestion.explanation;
+                    explanationContainer.style.display = "block";
+                    this.style.display = "none";
+                });
+                
+                // 在反饋訊息下方添加查看解析按鈕
+                feedbackContainer.appendChild(document.createElement("br"));
+                feedbackContainer.appendChild(document.createElement("br"));
+                feedbackContainer.appendChild(viewExplanationBtn);
+                
                 nextButton.style.display = "block";
             } else {
                 // 答錯
