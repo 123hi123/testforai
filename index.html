@@ -223,21 +223,95 @@
             color: #888;
             margin-top: 20px;
         }
+        .question-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+        .question-nav-btn {
+            width: 30px;
+            height: 30px;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .question-nav-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .question-nav-btn.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .question-nav-btn.answered {
+            background-color: #2ecc71;
+            color: white;
+            border-color: #2ecc71;
+        }
+        .question-nav-btn.wrong {
+            background-color: #e74c3c;
+            color: white;
+            border-color: #e74c3c;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .skip-btn {
+            padding: 8px 12px;
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .skip-btn:hover {
+            background-color: #7f8c8d;
+        }
+        .toggle-nav-btn {
+            padding: 5px 10px;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            transition: all 0.2s;
+        }
+        .toggle-nav-btn:hover {
+            background-color: #e0e0e0;
+        }
     </style>
 </head>
 <body>
     <div class="main-container">
         <h1>人工智慧測驗</h1>
-        <div class="progress">題目 <span id="current-question">1</span> / <span id="total-questions">10</span></div>
+        <div class="progress">題目 <span id="current-question">1</span> / <span id="total-questions">10</span>
+            <button id="toggle-nav-btn" class="toggle-nav-btn">顯示題目導航</button>
+        </div>
+        <div id="question-nav" class="question-nav" style="display: none;"></div>
         <div class="quiz-container">
             <div id="question-container" class="question"></div>
             <div id="options-container" class="options"></div>
             <div id="explanation" class="explanation"></div>
             <div id="feedback" class="feedback"></div>
-            <button id="next-btn" class="next-btn">下一題</button>
+            <div class="button-container">
+                <button id="skip-btn" class="skip-btn">跳過此題</button>
+                <button id="next-btn" class="next-btn">下一題</button>
+            </div>
         </div>
         <div id="result" class="result"></div>
-        <div class="version">版本：1.0.0</div>
+        <div class="version">版本：1.1.0</div>
     </div>
     
     <div class="ai-container">
@@ -395,6 +469,8 @@
         const totalQuestions = questions.length;
         let models = [];
         let selectedModel = "";
+        // 記錄已回答的題目和答案狀態 (0=未答, 1=答對, 2=答錯)
+        let answeredStatus = Array(totalQuestions).fill(0);
 
         // DOM元素
         const questionContainer = document.getElementById("question-container");
@@ -402,9 +478,12 @@
         const explanationContainer = document.getElementById("explanation");
         const feedbackContainer = document.getElementById("feedback");
         const nextButton = document.getElementById("next-btn");
+        const skipButton = document.getElementById("skip-btn");
         const resultContainer = document.getElementById("result");
         const currentQuestionElement = document.getElementById("current-question");
         const totalQuestionsElement = document.getElementById("total-questions");
+        const questionNav = document.getElementById("question-nav");
+        const toggleNavBtn = document.getElementById("toggle-nav-btn");
         const baseUrlInput = document.getElementById("base-url");
         const apiKeyInput = document.getElementById("api-key");
         const selectedModelInput = document.getElementById("selected-model");
@@ -445,10 +524,48 @@
         // 設置總題數
         totalQuestionsElement.textContent = totalQuestions;
 
+        // 創建題目導航按鈕
+        function createQuestionNav() {
+            questionNav.innerHTML = '';
+            for (let i = 0; i < totalQuestions; i++) {
+                const navBtn = document.createElement("div");
+                navBtn.className = "question-nav-btn";
+                if (i === currentQuestionIndex) {
+                    navBtn.classList.add("active");
+                }
+                if (answeredStatus[i] === 1) {
+                    navBtn.classList.add("answered");
+                } else if (answeredStatus[i] === 2) {
+                    navBtn.classList.add("wrong");
+                }
+                navBtn.textContent = i + 1;
+                navBtn.addEventListener("click", () => {
+                    if (i !== currentQuestionIndex) {
+                        // 清理當前題目狀態
+                        resetQuestionState();
+                        // 切換到所選題目
+                        currentQuestionIndex = i;
+                        displayQuestion();
+                    }
+                });
+                questionNav.appendChild(navBtn);
+            }
+        }
+
+        // 重置題目狀態
+        function resetQuestionState() {
+            feedbackContainer.style.display = "none";
+            explanationContainer.style.display = "none";
+            nextButton.style.display = "none";
+        }
+
         // 顯示題目函數
         function displayQuestion() {
             // 更新當前題目指示
             currentQuestionElement.textContent = currentQuestionIndex + 1;
+            
+            // 更新題目導航
+            updateQuestionNav();
             
             // 獲取當前題目
             const currentQuestion = questions[currentQuestionIndex];
@@ -485,6 +602,25 @@
 ${currentQuestion.options.join("\n")}`);
         }
 
+        // 更新題目導航
+        function updateQuestionNav() {
+            const navBtns = questionNav.querySelectorAll(".question-nav-btn");
+            navBtns.forEach((btn, index) => {
+                btn.classList.remove("active");
+                if (index === currentQuestionIndex) {
+                    btn.classList.add("active");
+                }
+                
+                // 更新答題狀態
+                btn.classList.remove("answered", "wrong");
+                if (answeredStatus[index] === 1) {
+                    btn.classList.add("answered");
+                } else if (answeredStatus[index] === 2) {
+                    btn.classList.add("wrong");
+                }
+            });
+        }
+
         // 檢查答案函數
         function checkAnswer(selectedOption, optionElement) {
             // 禁用所有選項
@@ -504,6 +640,9 @@ ${currentQuestion.options.join("\n")}`);
                 feedbackContainer.style.display = "block";
                 score++;
                 
+                // 更新答題狀態
+                answeredStatus[currentQuestionIndex] = 1;
+                
                 // 添加查看解析按鈕
                 const viewExplanationBtn = document.createElement("button");
                 viewExplanationBtn.textContent = "查看解析";
@@ -522,9 +661,13 @@ ${currentQuestion.options.join("\n")}`);
                 feedbackContainer.appendChild(viewExplanationBtn);
                 
                 nextButton.style.display = "block";
+                skipButton.style.display = "none";
             } else {
                 // 答錯
                 optionElement.classList.add("incorrect");
+                
+                // 更新答題狀態
+                answeredStatus[currentQuestionIndex] = 2;
                 
                 // 標示正確答案
                 allOptions.forEach(option => {
@@ -542,6 +685,21 @@ ${currentQuestion.options.join("\n")}`);
                 explanationContainer.style.display = "block";
                 
                 nextButton.style.display = "block";
+                skipButton.style.display = "none";
+            }
+            
+            // 更新題目導航
+            updateQuestionNav();
+        }
+
+        // 跳過題目函數
+        function skipQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < totalQuestions) {
+                displayQuestion();
+            } else {
+                // 測驗結束
+                showResult();
             }
         }
 
@@ -561,6 +719,7 @@ ${currentQuestion.options.join("\n")}`);
         function showResult() {
             document.querySelector(".quiz-container").style.display = "none";
             document.querySelector(".progress").style.display = "none";
+            document.getElementById("question-nav").style.display = "none";
             
             const percentage = (score / totalQuestions) * 100;
             resultContainer.innerHTML = `
@@ -764,6 +923,19 @@ ${currentQuestion.options.join("\n")}`);
         });
         modelSearch.addEventListener('input', searchModels);
         
+        // 題目導航顯示/隱藏
+        toggleNavBtn.addEventListener('click', () => {
+            if (questionNav.style.display === 'none') {
+                questionNav.style.display = 'flex';
+                toggleNavBtn.textContent = '隱藏題目導航';
+            } else {
+                questionNav.style.display = 'none';
+                toggleNavBtn.textContent = '顯示題目導航';
+            }
+        });
+        
+        skipButton.addEventListener('click', skipQuestion);
+        
         aiSubmitButton.addEventListener('click', () => {
             const message = chatInput.value.trim();
             if (message) {
@@ -792,6 +964,9 @@ ${currentQuestion.options.join("\n")}`);
         // 綁定下一題按鈕事件
         nextButton.addEventListener("click", nextQuestion);
 
+        // 創建題目導航
+        createQuestionNav();
+        
         // 開始顯示第一題
         displayQuestion();
     </script>
