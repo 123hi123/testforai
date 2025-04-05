@@ -2,973 +2,414 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人工智慧測驗</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anime.js 互動夜空 (可縮放)</title>
     <style>
-        body {
-            font-family: 'Microsoft JhengHei', Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-            color: #333;
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .main-container {
-            flex: 1;
-            min-width: 600px;
-        }
-        .ai-container {
-            width: 350px;
-            margin-left: 20px;
-        }
-        .quiz-container {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .ai-settings {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 15px;
-            margin-bottom: 15px;
-            position: relative;
-        }
-        .ai-chat {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 15px;
-            height: 500px;
-            display: flex;
-            flex-direction: column;
-        }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        h2 {
-            color: #3498db;
-            margin-top: 0;
-            font-size: 1.3rem;
-        }
-        .question {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .options {
-            margin-bottom: 20px;
-        }
-        .option {
-            display: block;
-            padding: 10px 15px;
-            margin: 8px 0;
-            background-color: #f1f1f1;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .option:hover {
-            background-color: #e0e0e0;
-        }
-        .correct {
-            background-color: #aaf0aa !important;
-        }
-        .incorrect {
-            background-color: #ffaaaa !important;
-        }
-        .feedback {
-            padding: 15px;
-            border-radius: 5px;
-            display: none;
-            margin-top: 10px;
-        }
-        .correct-feedback {
-            background-color: #dfffdf;
-            border: 1px solid #88cc88;
-        }
-        .incorrect-feedback {
-            background-color: #ffe6e6;
-            border: 1px solid #cc8888;
-        }
-        .next-btn, .model-btn, .ai-submit-btn {
-            padding: 8px 12px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        .next-btn {
-            display: none;
-            margin-top: 10px;
-        }
-        .next-btn:hover, .model-btn:hover, .ai-submit-btn:hover {
-            background-color: #2980b9;
-        }
-        .result {
-            text-align: center;
-            font-size: 1.2rem;
-            margin-top: 20px;
-        }
-        .progress {
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 1rem;
-            color: #666;
-        }
-        .explanation {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-left: 4px solid #3498db;
-            display: none;
-        }
-        .setting-group {
-            margin-bottom: 10px;
-        }
-        .setting-group label {
-            display: block;
-            margin-bottom: 3px;
-            font-size: 0.9rem;
-            color: #555;
-        }
-        .setting-group input {
+        html, body {
+            margin: 0;
+            padding: 0;
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+            height: 100%;
+            overflow: hidden; /* 非常重要：防止頁面滾動 */
+            background: linear-gradient(to bottom, #000000 0%, #0a0e2a 50%, #1b2735 100%);
+            /* 防止瀏覽器處理觸控事件（如頁面縮放、滾動），交由 JS 處理 */
+            touch-action: none;
         }
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
+
+        #night-sky-container {
+             position: relative;
+             width: 100%;
+             height: 100%;
+             overflow: hidden; /* 確保縮放/平移的內容被裁剪 */
+             cursor: grab; /* 提示可以拖動 */
         }
-        .chat-input {
-            display: flex;
+        #night-sky-container:active {
+            cursor: grabbing;
         }
-        .chat-input input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px 0 0 4px;
+
+        #night-sky {
+            position: absolute; /* 改為絕對定位，方便 transform */
+            width: 100%;
+            height: 100%;
+            /* transform-origin 非常重要，設為左上角方便計算 */
+            transform-origin: 0 0;
+            /* 初始 transform */
+            transform: translate(0px, 0px) scale(1);
+            /* 優化渲染性能 */
+            will-change: transform;
         }
-        .chat-input button {
-            border-radius: 0 4px 4px 0;
-        }
-        .message {
-            margin-bottom: 10px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-        .user-message {
-            background-color: #dcf8c6;
-            align-self: flex-end;
-            margin-left: auto;
-        }
-        .ai-message {
-            background-color: #e5e5ea;
-            align-self: flex-start;
-        }
-        .model-list {
-            display: none;
+
+        .star {
             position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-        .model-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #eee;
-        }
-        .model-item:hover {
-            background-color: #f0f0f0;
-        }
-        .model-search {
-            padding: 8px;
-            position: sticky;
-            top: 0;
-            background-color: white;
-            border-bottom: 1px solid #ddd;
-        }
-        .model-search input {
-            width: 100%;
-            padding: 6px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .version {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #888;
-            margin-top: 20px;
-        }
-        .question-nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-bottom: 15px;
-            justify-content: center;
-        }
-        .question-nav-btn {
-            width: 30px;
-            height: 30px;
-            background-color: #f1f1f1;
-            border: 1px solid #ddd;
+            background-color: #ffffff;
             border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.2s;
+            /* 星星不應隨父元素縮放而改變視覺大小，用偽元素模擬固定大小 */
+            width: 1px; /* 基礎大小設小，用偽元素放大 */
+            height: 1px;
         }
-        .question-nav-btn:hover {
-            background-color: #e0e0e0;
+        .star::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border-radius: 50%;
+            background-color: inherit; /* 繼承 .star 的顏色 */
+            box-shadow: inherit; /* 繼承 .star 的陰影 */
+            /* 透過 transform scale 調整大小，使其不受父元素 scale 影響 */
+            /* JS 會設定這個 scale */
+            transform: translate(-50%, -50%) scale(var(--star-visual-scale, 2)); /* 預設放大2倍 */
+            width: 1px; /* 偽元素基礎大小 */
+            height: 1px;
         }
-        .question-nav-btn.active {
-            background-color: #3498db;
-            color: white;
-            border-color: #3498db;
+
+        .star.blue { background-color: #8af; box-shadow: 0 0 8px #8af; }
+        .star.yellow { background-color: #fd5; box-shadow: 0 0 8px #fd5; }
+        .star.white { background-color: #fff; box-shadow: 0 0 8px #fff; }
+
+        .shooting-star {
+            position: absolute;
+            width: 2px;
+            height: 80px;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
+            transform: rotate(45deg);
+            opacity: 0;
+            /* 流星不受縮放影響 */
+            z-index: 10;
         }
-        .question-nav-btn.answered {
-            background-color: #2ecc71;
-            color: white;
-            border-color: #2ecc71;
-        }
-        .question-nav-btn.wrong {
-            background-color: #e74c3c;
-            color: white;
-            border-color: #e74c3c;
-        }
-        .button-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
-        }
-        .skip-btn {
-            padding: 8px 12px;
-            background-color: #95a5a6;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        .skip-btn:hover {
-            background-color: #7f8c8d;
-        }
-        .toggle-nav-btn {
-            padding: 5px 10px;
-            background-color: #f1f1f1;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            margin-left: 10px;
-            transition: all 0.2s;
-        }
-        .toggle-nav-btn:hover {
-            background-color: #e0e0e0;
+
+        .moon {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-color: #f9f3d9;
+            border-radius: 50%;
+            box-shadow: 0 0 30px #f9f3d9;
+            top: 50px;
+            right: 80px;
+            /* 月亮也不受縮放影響視覺大小，但會跟隨平移 */
+            /* 使用 transform scale 來抵銷父元素的 scale */
+            transform: scale(var(--moon-visual-scale, 1));
+            transform-origin: center center;
         }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <h1>人工智慧測驗</h1>
-        <div class="progress">題目 <span id="current-question">1</span> / <span id="total-questions">10</span>
-            <button id="toggle-nav-btn" class="toggle-nav-btn">顯示題目導航</button>
-        </div>
-        <div id="question-nav" class="question-nav" style="display: none;"></div>
-        <div class="quiz-container">
-            <div id="question-container" class="question"></div>
-            <div id="options-container" class="options"></div>
-            <div id="explanation" class="explanation"></div>
-            <div id="feedback" class="feedback"></div>
-            <div class="button-container">
-                <button id="skip-btn" class="skip-btn">跳過此題</button>
-                <button id="next-btn" class="next-btn">下一題</button>
-            </div>
-        </div>
-        <div id="result" class="result"></div>
-        <div class="version">版本：1.1.0</div>
-    </div>
-    
-    <div class="ai-container">
-        <div class="ai-settings">
-            <h2>AI 助手設置</h2>
-            <div class="setting-group">
-                <label for="base-url">API 基礎 URL:</label>
-                <input type="text" id="base-url" placeholder="例如: https://api.openai.com/v1" value="https://api.openai.com/v1">
-            </div>
-            <div class="setting-group">
-                <label for="api-key">API Key:</label>
-                <input type="password" id="api-key" placeholder="輸入您的API密鑰">
-            </div>
-            <div class="setting-group">
-                <label for="selected-model">選擇模型:</label>
-                <input type="text" id="selected-model" placeholder="點擊下方按鈕選擇模型" readonly>
-                <button id="model-btn" class="model-btn">查看可用模型</button>
-                <div id="model-list" class="model-list">
-                    <div class="model-search">
-                        <input type="text" id="model-search" placeholder="搜索模型...">
-                    </div>
-                    <div id="model-items"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="ai-chat">
-            <h2>AI 助手對話</h2>
-            <div id="chat-messages" class="chat-messages"></div>
-            <div class="chat-input">
-                <input type="text" id="chat-input" placeholder="輸入問題...">
-                <button id="ai-submit-btn" class="ai-submit-btn">發送</button>
-            </div>
+    <!-- 添加一個容器用於處理觸控事件和裁剪 -->
+    <div id="night-sky-container">
+        <div id="night-sky">
+            <div class="moon"></div>
+            <!-- 星星和流星將由 JS 添加到這裡 -->
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/animejs@4.0.0-beta.3/lib/anime.min.js"></script>
     <script>
-        // 題目和答案數據
-        const questions = [
-            {
-                question: "AI在近年引起了熱潮，也促使人們開始學習與AI進行「對話」，故人們首先應學著?",
-                options: [
-                    "A. 定義好問題",
-                    "B. 蒐集大數據",
-                    "C. 設計演算法",
-                    "D. 寫程式"
-                ],
-                correctAnswer: "A",
-                explanation: "與AI進行有效對話的第一步是定義好問題。清晰的問題定義能夠幫助AI更好地理解用戶意圖，提供更準確的回答。在學習與AI對話時，首先需要學會如何準確表達自己的需求，而不是先學習數據收集、演算法設計或編程。"
-            },
-            {
-                question: "AI是實際運用機器學習代理人類處理問題的一種方式；因此，通常需要針對「輸入」與「輸出」建立一套供其學習的「」?",
-                options: [
-                    "A. 實數",
-                    "B. 函數",
-                    "C. 基數",
-                    "D. 浮點數"
-                ],
-                correctAnswer: "B",
-                explanation: "AI系統需要建立輸入與輸出之間的映射關係，這種映射關係在數學上即是函數。機器學習本質上是透過大量數據訓練，找到一個能夠將輸入準確映射到期望輸出的函數模型。"
-            },
-            {
-                question: "現下的潮流「深度學習」，經常採用的機器學習方式為何?",
-                options: [
-                    "A. 問題導向式學習",
-                    "B. 非監督式學習",
-                    "C. 監督式學習",
-                    "D. 引導式學習"
-                ],
-                correctAnswer: "B",
-                explanation: "深度學習中常採用非監督式學習，讓AI系統自行從未標記的數據中識別模式和結構。非監督式學習使AI能夠發現數據中的隱藏關係，尤其在大規模數據集上表現優異，是深度學習的重要方法之一。"
-            },
-            {
-                question: "何者非本節所曾提及的機器學習演算法?",
-                options: [
-                    "A. 支援向量機",
-                    "B. 線性分類器",
-                    "C. K-NN",
-                    "D. 粒子群演算法"
-                ],
-                correctAnswer: "D",
-                explanation: "在本節提及的機器學習演算法中，支援向量機、線性分類器和K-NN都是常見的分類演算法。粒子群演算法屬於演化計算領域，主要用於優化問題，而非直接作為機器學習的核心演算法。"
-            },
-            {
-                question: "下列何者非決策樹演算法的主要名詞?",
-                options: [
-                    "A. 樹根",
-                    "B. 子節點",
-                    "C. 二元樹",
-                    "D. 樹頂"
-                ],
-                correctAnswer: "D",
-                explanation: "決策樹演算法的主要名詞包括樹根(root)、子節點(child node)和二元樹(binary tree)等。「樹頂」不是決策樹中的標準術語，正確的術語應為「根節點」或「樹根」，用來表示決策樹的頂部起始點。"
-            },
-            {
-                question: "在案例式推論系統中，最典型的演算法為何?",
-                options: [
-                    "A. S-NN",
-                    "B. M-NN",
-                    "C. K-NN",
-                    "D. L-NN"
-                ],
-                correctAnswer: "C",
-                explanation: "案例式推論系統（Case-Based Reasoning）中最典型的演算法是K-nearest neighbors (K-NN)。K-NN通過比較新案例與已知案例的相似度，找出最相似的K個案例，進而進行分類或預測，這與案例式推論的核心思想相符。"
-            },
-            {
-                question: "下列何者非工業4.0的主要應用範疇?",
-                options: [
-                    "A. 物聯網",
-                    "B. 人工智慧",
-                    "C. 雲端運算",
-                    "D. 消費者行為"
-                ],
-                correctAnswer: "D",
-                explanation: "工業4.0的主要應用範疇包括物聯網、人工智慧和雲端運算，這些技術共同支撐了智慧工廠的運作。消費者行為雖然是市場營銷領域的重要概念，但不屬於工業4.0的核心應用範疇。"
-            },
-            {
-                question: "下列何者非物聯網的主要架構成員?",
-                options: [
-                    "A. 應用層",
-                    "B. 虛擬層",
-                    "C. 網路層",
-                    "D. 感知層"
-                ],
-                correctAnswer: "B",
-                explanation: "物聯網的主要架構通常包括感知層（負責數據收集）、網路層（負責數據傳輸）和應用層（負責數據處理和應用）。「虛擬層」不是物聯網架構的標準組成部分。"
-            },
-            {
-                question: "下列何者非雲端運算的主要服務模式?",
-                options: [
-                    "A. 邊緣即服務",
-                    "B. 設備即服務",
-                    "C. 平台即服務",
-                    "D. 軟體即服務"
-                ],
-                correctAnswer: "A",
-                explanation: "雲端運算的主要服務模式包括軟體即服務(SaaS)、平台即服務(PaaS)和基礎設施即服務(IaaS)。「邊緣即服務」並非傳統雲端運算的標準服務模式，而是新興概念或邊緣計算的延伸應用。"
-            },
-            {
-                question: "在本節引述的專家系統實例中，所採用的智慧製造演算法為何?",
-                options: [
-                    "A. 支援向量機",
-                    "B. 線性分類器",
-                    "C. K-NN",
-                    "D. 粒子群演算法"
-                ],
-                correctAnswer: "C",
-                explanation: "在本節討論的專家系統實例中，K-NN（K-近鄰演算法）被用作智慧製造的核心演算法。K-NN能夠基於相似案例進行決策，非常適合專家系統中的案例推理和模式識別，能夠有效處理複雜的製造場景中的分類和預測問題。"
-            }
-        ];
+        const skyContainer = document.getElementById('night-sky-container');
+        const sky = document.getElementById('night-sky');
+        const moon = document.querySelector('.moon'); // 獲取月亮元素
+        const STAR_COUNT = 300;
+        const SHOOTING_STAR_COUNT = 10;
+        const starColors = ['blue', 'yellow', 'white'];
 
-        // 初始變數
-        let currentQuestionIndex = 0;
-        let score = 0;
-        const totalQuestions = questions.length;
-        let models = [];
-        let selectedModel = "";
-        // 記錄已回答的題目和答案狀態 (0=未答, 1=答對, 2=答錯)
-        let answeredStatus = Array(totalQuestions).fill(0);
+        // --- 星星和流星創建邏輯 (與之前類似) ---
+        for (let i = 0; i < STAR_COUNT; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            const colorClass = starColors[Math.floor(Math.random() * starColors.length)];
+            star.classList.add(colorClass);
 
-        // DOM元素
-        const questionContainer = document.getElementById("question-container");
-        const optionsContainer = document.getElementById("options-container");
-        const explanationContainer = document.getElementById("explanation");
-        const feedbackContainer = document.getElementById("feedback");
-        const nextButton = document.getElementById("next-btn");
-        const skipButton = document.getElementById("skip-btn");
-        const resultContainer = document.getElementById("result");
-        const currentQuestionElement = document.getElementById("current-question");
-        const totalQuestionsElement = document.getElementById("total-questions");
-        const questionNav = document.getElementById("question-nav");
-        const toggleNavBtn = document.getElementById("toggle-nav-btn");
-        const baseUrlInput = document.getElementById("base-url");
-        const apiKeyInput = document.getElementById("api-key");
-        const selectedModelInput = document.getElementById("selected-model");
-        const modelButton = document.getElementById("model-btn");
-        const modelList = document.getElementById("model-list");
-        const modelItems = document.getElementById("model-items");
-        const modelSearch = document.getElementById("model-search");
-        const chatMessages = document.getElementById("chat-messages");
-        const chatInput = document.getElementById("chat-input");
-        const aiSubmitButton = document.getElementById("ai-submit-btn");
+            const size = Math.random() * 2.5 + 1.5; // 星星視覺大小 (1.5 to 4)
+            // 使用 CSS 變數來設定視覺大小，使其不受父元素 transform:scale 影響
+            star.style.setProperty('--star-visual-scale', size);
 
-        // 嘗試從localStorage加載模型和設置
-        try {
-            const savedModels = localStorage.getItem('aiQuizModels');
-            if (savedModels) {
-                models = JSON.parse(savedModels);
-            }
-            
-            const savedModel = localStorage.getItem('aiQuizSelectedModel');
-            if (savedModel) {
-                selectedModel = savedModel;
-                selectedModelInput.value = savedModel;
-            }
-            
-            const savedApiKey = localStorage.getItem('aiQuizApiKey');
-            if (savedApiKey) {
-                apiKeyInput.value = savedApiKey;
-            }
-            
-            const savedBaseUrl = localStorage.getItem('aiQuizBaseUrl');
-            if (savedBaseUrl) {
-                baseUrlInput.value = savedBaseUrl;
-            }
-        } catch (e) {
-            console.error("無法從本地存儲加載設置:", e);
+            star.style.top = `${Math.random() * 100}%`;
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.opacity = Math.random() * 0.7 + 0.3;
+            sky.appendChild(star);
         }
 
-        // 設置總題數
-        totalQuestionsElement.textContent = totalQuestions;
-
-        // 創建題目導航按鈕
-        function createQuestionNav() {
-            questionNav.innerHTML = '';
-            for (let i = 0; i < totalQuestions; i++) {
-                const navBtn = document.createElement("div");
-                navBtn.className = "question-nav-btn";
-                if (i === currentQuestionIndex) {
-                    navBtn.classList.add("active");
-                }
-                if (answeredStatus[i] === 1) {
-                    navBtn.classList.add("answered");
-                } else if (answeredStatus[i] === 2) {
-                    navBtn.classList.add("wrong");
-                }
-                navBtn.textContent = i + 1;
-                navBtn.addEventListener("click", () => {
-                    if (i !== currentQuestionIndex) {
-                        // 清理當前題目狀態
-                        resetQuestionState();
-                        // 切換到所選題目
-                        currentQuestionIndex = i;
-                        displayQuestion();
-                    }
-                });
-                questionNav.appendChild(navBtn);
-            }
+        for (let i = 0; i < SHOOTING_STAR_COUNT; i++) {
+            const shootingStar = document.createElement('div');
+            shootingStar.classList.add('shooting-star');
+            shootingStar.style.top = `${Math.random() * 50}%`;
+            shootingStar.style.left = `${Math.random() * 100}%`;
+            // 流星添加到 container，使其不受 sky 的 transform 影響
+            skyContainer.appendChild(shootingStar);
         }
 
-        // 重置題目狀態
-        function resetQuestionState() {
-            feedbackContainer.style.display = "none";
-            explanationContainer.style.display = "none";
-            nextButton.style.display = "none";
-        }
+        // --- 動畫邏輯 (與之前類似) ---
+        const starTimeline = anime.timeline({ autoplay: true, loop: true });
+        starTimeline.add({
+            targets: '.star',
+            opacity: () => [anime.random(0.1, 0.4), anime.random(0.5, 1)],
+            // 改變 --star-visual-scale 來閃爍，而不是直接 scale
+            '--star-visual-scale': () => [anime.random(1, 1.5), anime.random(2, 4)],
+            duration: () => anime.random(1000, 3000),
+            delay: anime.stagger(50, {from: 'random'}),
+            easing: 'easeInOutSine',
+            direction: 'alternate',
+            loop: true
+        });
 
-        // 顯示題目函數
-        function displayQuestion() {
-            // 更新當前題目指示
-            currentQuestionElement.textContent = currentQuestionIndex + 1;
-            
-            // 更新題目導航
-            updateQuestionNav();
-            
-            // 獲取當前題目
-            const currentQuestion = questions[currentQuestionIndex];
-            
-            // 顯示題目文字
-            questionContainer.textContent = (currentQuestionIndex + 1) + ". " + currentQuestion.question;
-            
-            // 清空選項容器
-            optionsContainer.innerHTML = "";
-            
-            // 添加選項
-            currentQuestion.options.forEach(option => {
-                const optionElement = document.createElement("div");
-                optionElement.className = "option";
-                optionElement.textContent = option;
-                optionElement.addEventListener("click", function() {
-                    checkAnswer(option.charAt(0), this);
-                });
-                optionsContainer.appendChild(optionElement);
-            });
-            
-            // 重置反饋訊息
-            feedbackContainer.style.display = "none";
-            explanationContainer.style.display = "none";
-            nextButton.style.display = "none";
+        function animateShootingStar(star) {
+            const startX = Math.random() * window.innerWidth + window.innerWidth * 0.2; // 從右側或下方開始
+            const startY = -100; // 從頂部外開始
+            const endX = startX - (window.innerWidth * 1.2 + Math.random() * 500); // 移向左側
+            const endY = window.innerHeight * 1.2; // 移向底部外
+            const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI - 90; // 計算角度
 
-            // 清空聊天記錄
-            chatMessages.innerHTML = "";
-            
-            // 添加當前題目到AI聊天窗口
-            addAIMessage(`當前題目: ${currentQuestion.question}
-            
-選項:
-${currentQuestion.options.join("\n")}`);
-        }
-
-        // 更新題目導航
-        function updateQuestionNav() {
-            const navBtns = questionNav.querySelectorAll(".question-nav-btn");
-            navBtns.forEach((btn, index) => {
-                btn.classList.remove("active");
-                if (index === currentQuestionIndex) {
-                    btn.classList.add("active");
-                }
-                
-                // 更新答題狀態
-                btn.classList.remove("answered", "wrong");
-                if (answeredStatus[index] === 1) {
-                    btn.classList.add("answered");
-                } else if (answeredStatus[index] === 2) {
-                    btn.classList.add("wrong");
+            anime({
+                targets: star,
+                left: [`${startX}px`, `${endX}px`],
+                top: [`${startY}px`, `${endY}px`],
+                opacity: [0, 1, 0],
+                rotate: `${angle}deg`, // 根據軌跡旋轉
+                duration: anime.random(800, 1600),
+                delay: anime.random(1000, 10000),
+                easing: 'easeInExpo', // 流星加速
+                complete: function() {
+                    // 不需要重置位置，每次重新計算起始點
+                    setTimeout(() => {
+                        animateShootingStar(star);
+                    }, anime.random(5000, 20000)); // 更長的隨機間隔
                 }
             });
         }
-
-        // 檢查答案函數
-        function checkAnswer(selectedOption, optionElement) {
-            // 禁用所有選項
-            const allOptions = document.querySelectorAll(".option");
-            allOptions.forEach(option => {
-                option.style.pointerEvents = "none";
-            });
-            
-            const currentQuestion = questions[currentQuestionIndex];
-            const correctOption = currentQuestion.correctAnswer;
-            
-            if (selectedOption === correctOption) {
-                // 答對
-                optionElement.classList.add("correct");
-                feedbackContainer.textContent = "恭喜！答案正確。";
-                feedbackContainer.className = "feedback correct-feedback";
-                feedbackContainer.style.display = "block";
-                score++;
-                
-                // 更新答題狀態
-                answeredStatus[currentQuestionIndex] = 1;
-                
-                // 添加查看解析按鈕
-                const viewExplanationBtn = document.createElement("button");
-                viewExplanationBtn.textContent = "查看解析";
-                viewExplanationBtn.className = "next-btn";
-                viewExplanationBtn.style.backgroundColor = "#27ae60";
-                viewExplanationBtn.style.marginRight = "10px";
-                viewExplanationBtn.addEventListener("click", function() {
-                    explanationContainer.textContent = "解析: " + currentQuestion.explanation;
-                    explanationContainer.style.display = "block";
-                    this.style.display = "none";
-                });
-                
-                // 在反饋訊息下方添加查看解析按鈕
-                feedbackContainer.appendChild(document.createElement("br"));
-                feedbackContainer.appendChild(document.createElement("br"));
-                feedbackContainer.appendChild(viewExplanationBtn);
-                
-                nextButton.style.display = "block";
-                skipButton.style.display = "none";
-            } else {
-                // 答錯
-                optionElement.classList.add("incorrect");
-                
-                // 更新答題狀態
-                answeredStatus[currentQuestionIndex] = 2;
-                
-                // 標示正確答案
-                allOptions.forEach(option => {
-                    if (option.textContent.charAt(0) === correctOption) {
-                        option.classList.add("correct");
-                    }
-                });
-                
-                feedbackContainer.textContent = "答案不正確。";
-                feedbackContainer.className = "feedback incorrect-feedback";
-                feedbackContainer.style.display = "block";
-                
-                // 顯示解析
-                explanationContainer.textContent = "解析: " + currentQuestion.explanation;
-                explanationContainer.style.display = "block";
-                
-                nextButton.style.display = "block";
-                skipButton.style.display = "none";
-            }
-            
-            // 更新題目導航
-            updateQuestionNav();
-        }
-
-        // 跳過題目函數
-        function skipQuestion() {
-            currentQuestionIndex++;
-            if (currentQuestionIndex < totalQuestions) {
-                displayQuestion();
-            } else {
-                // 測驗結束
-                showResult();
-            }
-        }
-
-        // 下一題函數
-        function nextQuestion() {
-            currentQuestionIndex++;
-            
-            if (currentQuestionIndex < totalQuestions) {
-                displayQuestion();
-            } else {
-                // 測驗結束
-                showResult();
-            }
-        }
-
-        // 顯示結果函數
-        function showResult() {
-            document.querySelector(".quiz-container").style.display = "none";
-            document.querySelector(".progress").style.display = "none";
-            document.getElementById("question-nav").style.display = "none";
-            
-            const percentage = (score / totalQuestions) * 100;
-            resultContainer.innerHTML = `
-                <h2>測驗結束！</h2>
-                <p>你的得分: ${score} / ${totalQuestions} (${percentage.toFixed(2)}%)</p>
-                <button onclick="location.reload()">再測一次</button>
-            `;
-        }
-
-        // 獲取可用模型
-        async function fetchModels() {
-            try {
-                const baseUrl = baseUrlInput.value.trim();
-                const apiKey = apiKeyInput.value.trim();
-                
-                if (!baseUrl || !apiKey) {
-                    alert("請輸入有效的API基礎URL和API Key");
-                    return;
-                }
-                
-                // 保存設置到localStorage
-                localStorage.setItem('aiQuizBaseUrl', baseUrl);
-                localStorage.setItem('aiQuizApiKey', apiKey);
-                
-                // 如果已經有模型列表，直接顯示
-                if (models && models.length > 0) {
-                    displayModels(models);
-                    modelList.style.display = 'block';
-                    return;
-                }
-                
-                // 顯示加載中...
-                modelItems.innerHTML = '<div class="model-item">加載中...</div>';
-                modelList.style.display = 'block';
-                
-                const response = await fetch(`${baseUrl}/models`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                models = data.data || [];
-                
-                // 保存模型列表到localStorage
-                localStorage.setItem('aiQuizModels', JSON.stringify(models));
-                
-                displayModels(models);
-            } catch (error) {
-                console.error("獲取模型失敗:", error);
-                alert("獲取模型失敗: " + error.message);
-                modelItems.innerHTML = '<div class="model-item">獲取模型失敗</div>';
-            }
-        }
-
-        // 顯示模型列表
-        function displayModels(modelsList) {
-            modelItems.innerHTML = '';
-            
-            modelsList.forEach(model => {
-                const modelItem = document.createElement('div');
-                modelItem.className = 'model-item';
-                modelItem.textContent = model.id;
-                modelItem.addEventListener('click', () => {
-                    selectedModel = model.id;
-                    selectedModelInput.value = model.id;
-                    localStorage.setItem('aiQuizSelectedModel', model.id);
-                    modelList.style.display = 'none';
-                });
-                modelItems.appendChild(modelItem);
-            });
-        }
-
-        // 搜索模型
-        function searchModels() {
-            const searchTerm = modelSearch.value.toLowerCase();
-            const filteredModels = models.filter(model => 
-                model.id.toLowerCase().includes(searchTerm)
-            );
-            displayModels(filteredModels);
-        }
-
-        // 添加用戶訊息到聊天
-        function addUserMessage(message) {
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message user-message';
-            messageElement.textContent = message;
-            chatMessages.appendChild(messageElement);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // 添加AI訊息到聊天
-        function addAIMessage(message) {
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message ai-message';
-            messageElement.textContent = message;
-            chatMessages.appendChild(messageElement);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // 發送訊息給AI
-        async function sendMessageToAI(message) {
-            try {
-                const baseUrl = baseUrlInput.value.trim();
-                const apiKey = apiKeyInput.value.trim();
-                const model = selectedModel;
-                
-                if (!baseUrl || !apiKey || !model) {
-                    alert("請先設置API基礎URL、API Key以及選擇模型");
-                    return;
-                }
-                
-                // 添加用戶訊息到聊天
-                addUserMessage(message);
-                
-                // 顯示AI正在處理
-                const loadingElement = document.createElement('div');
-                loadingElement.className = 'message ai-message';
-                loadingElement.textContent = "思考中...";
-                chatMessages.appendChild(loadingElement);
-                
-                const currentQuestion = questions[currentQuestionIndex];
-                
-                const response = await fetch(`${baseUrl}/chat/completions`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [
-                            {
-                                role: "system",
-                                content: `你是一位專業的教育助手，專注於幫助學習者理解人工智慧相關概念。
-
-你的角色：
-- 引導學習者思考，而非直接提供答案
-- 解釋相關概念和理論背景
-- 提供適當的例子幫助理解
-- 鼓勵批判性思考
-
-當前題目: ${currentQuestion.question}
-選項: ${currentQuestion.options.join(" | ")}
-
-請記住：
-1. 不要直接告訴用戶哪個選項是正確答案
-2. 引導他們理解每個選項背後的概念
-3. 提供相關的知識背景，幫助他們做出自己的判斷
-4. 如果用戶明確要求提示，可以給出思考方向，但不要直接給答案
-5. 保持專業且友善的態度`
-                            },
-                            {
-                                role: "user",
-                                content: message
-                            }
-                        ],
-                        max_tokens: 500
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // 移除載入訊息
-                chatMessages.removeChild(loadingElement);
-                
-                // 添加AI回復到聊天
-                const aiResponse = data.choices[0].message.content;
-                addAIMessage(aiResponse);
-                
-            } catch (error) {
-                console.error("發送訊息失敗:", error);
-                alert("發送訊息失敗: " + error.message);
-                // 移除載入訊息
-                const loadingElements = document.querySelectorAll('.ai-message');
-                if (loadingElements.length > 0) {
-                    chatMessages.removeChild(loadingElements[loadingElements.length - 1]);
-                }
-            }
-        }
-
-        // 綁定事件
-        modelButton.addEventListener('click', fetchModels);
-        selectedModelInput.addEventListener('click', () => {
-            if (models && models.length > 0) {
-                displayModels(models);
-                modelList.style.display = 'block';
-            } else {
-                fetchModels();
-            }
+        document.querySelectorAll('.shooting-star').forEach(star => {
+            animateShootingStar(star);
         });
-        modelSearch.addEventListener('input', searchModels);
-        
-        // 題目導航顯示/隱藏
-        toggleNavBtn.addEventListener('click', () => {
-            if (questionNav.style.display === 'none') {
-                questionNav.style.display = 'flex';
-                toggleNavBtn.textContent = '隱藏題目導航';
-            } else {
-                questionNav.style.display = 'none';
-                toggleNavBtn.textContent = '顯示題目導航';
-            }
+
+        anime({
+            targets: '.moon',
+            boxShadow: [
+                '0 0 30px rgba(249, 243, 217, 0.8)',
+                '0 0 45px rgba(249, 243, 217, 1)',
+                '0 0 30px rgba(249, 243, 217, 0.8)'
+            ],
+            duration: 4000,
+            easing: 'easeInOutSine',
+            direction: 'alternate',
+            loop: true
         });
-        
-        skipButton.addEventListener('click', skipQuestion);
-        
-        aiSubmitButton.addEventListener('click', () => {
-            const message = chatInput.value.trim();
-            if (message) {
-                sendMessageToAI(message);
-                chatInput.value = '';
-            }
-        });
-        
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const message = chatInput.value.trim();
-                if (message) {
-                    sendMessageToAI(message);
-                    chatInput.value = '';
-                }
-            }
-        });
-        
-        // 點擊外部關閉模型列表
-        document.addEventListener('click', (e) => {
-            if (!modelList.contains(e.target) && e.target !== modelButton) {
-                modelList.style.display = 'none';
+
+
+        // --- 觸控縮放與平移邏輯 ---
+        let currentScale = 1;
+        let currentTranslateX = 0;
+        let currentTranslateY = 0;
+
+        let isPinching = false;
+        let initialDistance = 0;
+        let pinchCenterX = 0;
+        let pinchCenterY = 0;
+
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let initialTranslateX = 0;
+        let initialTranslateY = 0;
+
+        const MIN_SCALE = 0.5;
+        const MAX_SCALE = 4;
+
+        // 更新 Transform 的函數
+        function applyTransform() {
+            // 限制平移範圍，防止天空完全移出視窗
+            const skyRect = sky.getBoundingClientRect(); // 獲取當前實際尺寸和位置
+            const containerRect = skyContainer.getBoundingClientRect();
+
+            // 計算縮放後的尺寸
+            const scaledWidth = containerRect.width * currentScale;
+            const scaledHeight = containerRect.height * currentScale;
+
+            // 限制 X 軸平移
+            const minTranslateX = containerRect.width - scaledWidth; // 負數或 0
+            const maxTranslateX = 0;
+            currentTranslateX = Math.max(minTranslateX, Math.min(maxTranslateX, currentTranslateX));
+
+            // 限制 Y 軸平移
+            const minTranslateY = containerRect.height - scaledHeight; // 負數或 0
+            const maxTranslateY = 0;
+            currentTranslateY = Math.max(minTranslateY, Math.min(maxTranslateY, currentTranslateY));
+
+            sky.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
+
+            // --- 更新固定大小元素的縮放 ---
+            // 星星的大小通過 CSS 變數控制，已經處理
+            // 月亮需要反向縮放以保持視覺大小不變
+            const moonScale = 1 / currentScale;
+            moon.style.setProperty('--moon-visual-scale', moonScale);
+        }
+
+        // 計算兩點間距離
+        function getDistance(touch1, touch2) {
+            const dx = touch1.clientX - touch2.clientX;
+            const dy = touch1.clientY - touch2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // 計算兩點中心
+        function getCenter(touch1, touch2) {
+            return {
+                x: (touch1.clientX + touch2.clientX) / 2,
+                y: (touch1.clientY + touch2.clientY) / 2
+            };
+        }
+
+        skyContainer.addEventListener('touchstart', (e) => {
+            // e.preventDefault(); // 通常需要阻止默認行為，但 touch-action: none 已經處理
+
+            if (e.touches.length === 2) {
+                isPinching = true;
+                isPanning = false; // 停止平移
+                initialDistance = getDistance(e.touches[0], e.touches[1]);
+                const center = getCenter(e.touches[0], e.touches[1]);
+                // 計算縮放中心點相對於 sky 元素左上角的位置
+                const skyRect = sky.getBoundingClientRect();
+                pinchCenterX = (center.x - skyRect.left) / currentScale;
+                pinchCenterY = (center.y - skyRect.top) / currentScale;
+                // pinchCenterX = (center.x - currentTranslateX) / currentScale; // 相對於容器，未縮放前
+                // pinchCenterY = (center.y - currentTranslateY) / currentScale;
+
+            } else if (e.touches.length === 1 && currentScale > 1) { // 只有縮放後才允許單指平移
+                isPanning = true;
+                isPinching = false; // 停止縮放
+                panStartX = e.touches[0].clientX;
+                panStartY = e.touches[0].clientY;
+                initialTranslateX = currentTranslateX;
+                initialTranslateY = currentTranslateY;
+                skyContainer.style.cursor = 'grabbing';
             }
         });
 
-        // 綁定下一題按鈕事件
-        nextButton.addEventListener("click", nextQuestion);
+        skyContainer.addEventListener('touchmove', (e) => {
+           // e.preventDefault();
 
-        // 創建題目導航
-        createQuestionNav();
-        
-        // 開始顯示第一題
-        displayQuestion();
+            if (isPinching && e.touches.length === 2) {
+                const currentDistance = getDistance(e.touches[0], e.touches[1]);
+                const scaleDelta = currentDistance / initialDistance;
+                let newScale = currentScale * scaleDelta;
+
+                // 限制縮放比例
+                newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+                // 計算新的中心點
+                const newCenter = getCenter(e.touches[0], e.touches[1]);
+
+                // --- 計算新的 translate，使縮放中心保持在手指下方 ---
+                // 核心邏輯：
+                // 1. 找出縮放中心點 (pinchCenterX, pinchCenterY) 在新縮放比例下的預期 viewport 位置
+                //    expectedViewportX = newTranslateX + pinchCenterX * newScale
+                //    expectedViewportY = newTranslateY + pinchCenterY * newScale
+                // 2. 我們希望這個預期位置等於當前手指中心 (newCenter.x, newCenter.y)
+                //    newCenter.x = newTranslateX + pinchCenterX * newScale
+                //    newCenter.y = newTranslateY + pinchCenterY * newScale
+                // 3. 解出 newTranslateX 和 newTranslateY
+                const newTranslateX = newCenter.x - pinchCenterX * newScale;
+                const newTranslateY = newCenter.y - pinchCenterY * newScale;
+
+                // 更新狀態
+                currentScale = newScale;
+                currentTranslateX = newTranslateX;
+                currentTranslateY = newTranslateY;
+                initialDistance = currentDistance; // 更新初始距離以便連續縮放
+
+                applyTransform();
+
+            } else if (isPanning && e.touches.length === 1) {
+                const panCurrentX = e.touches[0].clientX;
+                const panCurrentY = e.touches[0].clientY;
+
+                const deltaX = panCurrentX - panStartX;
+                const deltaY = panCurrentY - panStartY;
+
+                currentTranslateX = initialTranslateX + deltaX;
+                currentTranslateY = initialTranslateY + deltaY;
+
+                applyTransform();
+            }
+        });
+
+        skyContainer.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isPinching = false;
+            }
+            if (e.touches.length < 1) {
+                isPanning = false;
+                skyContainer.style.cursor = 'grab';
+            }
+            // 保存最後的狀態（如果需要的話）
+            initialTranslateX = currentTranslateX;
+            initialTranslateY = currentTranslateY;
+        });
+
+        // --- 添加桌面鼠標滾輪縮放和拖動 ---
+        let isDragging = false;
+        skyContainer.addEventListener('wheel', (e) => {
+            e.preventDefault(); // 阻止頁面滾動
+
+            const scaleAmount = -e.deltaY * 0.001; // 調整滾輪縮放速度
+            let newScale = currentScale * (1 + scaleAmount);
+            newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+            // 計算鼠標指針相對於 sky 元素的位置作為縮放中心
+            const skyRect = sky.getBoundingClientRect();
+            const mouseX = (e.clientX - skyRect.left) / currentScale;
+            const mouseY = (e.clientY - skyRect.top) / currentScale;
+
+            // 計算新的 translate
+            const newTranslateX = e.clientX - mouseX * newScale;
+            const newTranslateY = e.clientY - mouseY * newScale;
+
+            currentScale = newScale;
+            currentTranslateX = newTranslateX;
+            currentTranslateY = newTranslateY;
+
+            applyTransform();
+        });
+
+        skyContainer.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // 只響應左鍵
+                isDragging = true;
+                panStartX = e.clientX;
+                panStartY = e.clientY;
+                initialTranslateX = currentTranslateX;
+                initialTranslateY = currentTranslateY;
+                skyContainer.style.cursor = 'grabbing';
+            }
+        });
+
+        skyContainer.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - panStartX;
+                const deltaY = e.clientY - panStartY;
+                currentTranslateX = initialTranslateX + deltaX;
+                currentTranslateY = initialTranslateY + deltaY;
+                applyTransform();
+            }
+        });
+
+        skyContainer.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                skyContainer.style.cursor = 'grab';
+                // 保存狀態
+                initialTranslateX = currentTranslateX;
+                initialTranslateY = currentTranslateY;
+            }
+        });
+        skyContainer.addEventListener('mouseleave', () => { // 如果鼠標移出容器，也停止拖動
+             if (isDragging) {
+                isDragging = false;
+                skyContainer.style.cursor = 'grab';
+                initialTranslateX = currentTranslateX;
+                initialTranslateY = currentTranslateY;
+            }
+        });
+
+        // 初始應用一次 transform
+        applyTransform();
+
     </script>
 </body>
-</html> 
+</html>
