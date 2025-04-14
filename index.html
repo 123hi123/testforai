@@ -1,415 +1,581 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anime.js 互動夜空 (可縮放)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动画天气卡片</title>
     <style>
-        html, body {
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
             margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* 非常重要：防止頁面滾動 */
-            background: linear-gradient(to bottom, #000000 0%, #0a0e2a 50%, #1b2735 100%);
-            /* 防止瀏覽器處理觸控事件（如頁面縮放、滾動），交由 JS 處理 */
-            touch-action: none;
+            padding: 20px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        #night-sky-container {
-             position: relative;
-             width: 100%;
-             height: 100%;
-             overflow: hidden; /* 確保縮放/平移的內容被裁剪 */
-             cursor: grab; /* 提示可以拖動 */
-        }
-        #night-sky-container:active {
-            cursor: grabbing;
+        h1 {
+            margin-bottom: 30px;
         }
 
-        #night-sky {
-            position: absolute; /* 改為絕對定位，方便 transform */
-            width: 100%;
-            height: 100%;
-            /* transform-origin 非常重要，設為左上角方便計算 */
-            transform-origin: 0 0;
-            /* 初始 transform */
-            transform: translate(0px, 0px) scale(1);
-            /* 優化渲染性能 */
-            will-change: transform;
+        .container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1200px;
         }
 
-        .star {
+        .weather-card {
+            width: 250px;
+            height: 350px;
+            background-color: #1e1e1e;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+        }
+
+        .card-title {
             position: absolute;
-            background-color: #ffffff;
-            border-radius: 50%;
-            /* 星星不應隨父元素縮放而改變視覺大小，用偽元素模擬固定大小 */
-            width: 1px; /* 基礎大小設小，用偽元素放大 */
-            height: 1px;
+            top: 15px;
+            left: 15px;
+            font-size: 24px;
+            z-index: 10;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
         }
-        .star::after {
-            content: '';
+
+        /* 风的样式 */
+        .wind-card {
+            background: linear-gradient(to bottom, #2c3e50, #34495e);
+        }
+
+        .cloud {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+        }
+
+        .tree {
+            position: absolute;
+            bottom: 40px;
+            width: 20px;
+            background-color: #5D4037;
+            transform-origin: bottom center;
+        }
+
+        .tree-top {
+            position: absolute;
+            width: 60px;
+            height: 80px;
+            background-color: #2E7D32;
+            border-radius: 50%;
+            transform-origin: bottom center;
+        }
+
+        /* 雨的样式 */
+        .rain-card {
+            background: linear-gradient(to bottom, #2c3e50, #203a43);
+        }
+
+        .rain-drop {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.7);
+            width: 2px;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .puddle {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 15px;
+            background-color: rgba(176, 224, 230, 0.5);
+            border-radius: 50%;
+        }
+
+        .ripple {
+            position: absolute;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 1;
+        }
+
+        /* 太阳的样式 */
+        .sun-card {
+            background: linear-gradient(to bottom, #f39c12, #d35400);
+        }
+
+        .sun {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: #f1c40f;
+            border-radius: 50%;
+            box-shadow: 0 0 20px 5px #f39c12;
+        }
+
+        .ray {
             position: absolute;
             top: 50%;
             left: 50%;
-            border-radius: 50%;
-            background-color: inherit; /* 繼承 .star 的顏色 */
-            box-shadow: inherit; /* 繼承 .star 的陰影 */
-            /* 透過 transform scale 調整大小，使其不受父元素 scale 影響 */
-            /* JS 會設定這個 scale */
-            transform: translate(-50%, -50%) scale(var(--star-visual-scale, 2)); /* 預設放大2倍 */
-            width: 1px; /* 偽元素基礎大小 */
-            height: 1px;
+            height: 2px;
+            background-color: #f1c40f;
+            transform-origin: left center;
         }
 
-        .star.blue { background-color: #8af; box-shadow: 0 0 8px #8af; }
-        .star.yellow { background-color: #fd5; box-shadow: 0 0 8px #fd5; }
-        .star.white { background-color: #fff; box-shadow: 0 0 8px #fff; }
-
-        .shooting-star {
-            position: absolute;
-            width: 2px;
-            height: 80px;
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
-            transform: rotate(45deg);
-            opacity: 0;
-            /* 流星不受縮放影響 */
-            z-index: 10;
+        /* 雪的样式 */
+        .snow-card {
+            background: linear-gradient(to bottom, #34495e, #2c3e50);
         }
 
-        .moon {
+        .snowflake {
             position: absolute;
-            width: 100px;
-            height: 100px;
-            background-color: #f9f3d9;
-            border-radius: 50%;
-            box-shadow: 0 0 30px #f9f3d9;
-            top: 50px;
-            right: 80px;
-            /* 月亮也不受縮放影響視覺大小，但會跟隨平移 */
-            /* 使用 transform scale 來抵銷父元素的 scale */
-            transform: scale(var(--moon-visual-scale, 1));
-            transform-origin: center center;
+            color: white;
+            user-select: none;
+            z-index: 1;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 5px 5px 0 0;
+        }
+
+        /* 按钮样式 */
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        button.active {
+            background-color: #e74c3c;
+        }
+
+        /* 天气图标 */
+        .weather-icon {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 28px;
+        }
+
+        @keyframes moveCloud {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(350px); }
+        }
+
+        @keyframes swayTree {
+            0% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+            100% { transform: rotate(-5deg); }
+        }
+
+        @keyframes rainFall {
+            0% { transform: translateY(-10px); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(350px); opacity: 0; }
+        }
+
+        @keyframes expandRipple {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 50px; height: 50px; opacity: 0; }
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 20px 5px #f39c12; }
+            50% { box-shadow: 0 0 40px 10px #f39c12; }
+            100% { box-shadow: 0 0 20px 5px #f39c12; }
+        }
+
+        @keyframes rotateRay {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @keyframes snowFall {
+            0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(350px) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes drift {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
         }
     </style>
 </head>
 <body>
-    <!-- 添加一個容器用於處理觸控事件和裁剪 -->
-    <div id="night-sky-container">
-        <div id="night-sky">
-            <div class="moon"></div>
-            <!-- 星星和流星將由 JS 添加到這裡 -->
+    <h1>动画天气卡片</h1>
+    
+    <div class="container">
+        <div class="weather-card wind-card" id="wind-card">
+            <div class="card-title">风</div>
+            <div class="weather-icon">🌬️</div>
+            <!-- 风的元素将由JavaScript生成 -->
+        </div>
+        
+        <div class="weather-card rain-card" id="rain-card">
+            <div class="card-title">雨</div>
+            <div class="weather-icon">🌧️</div>
+            <div class="puddle"></div>
+            <!-- 雨的元素将由JavaScript生成 -->
+        </div>
+        
+        <div class="weather-card sun-card" id="sun-card">
+            <div class="card-title">太阳</div>
+            <div class="weather-icon">☀️</div>
+            <!-- 太阳的元素将由JavaScript生成 -->
+        </div>
+        
+        <div class="weather-card snow-card" id="snow-card">
+            <div class="card-title">雪</div>
+            <div class="weather-icon">❄️</div>
+            <div class="ground"></div>
+            <!-- 雪的元素将由JavaScript生成 -->
         </div>
     </div>
+    
+    <div class="controls">
+        <button id="start-all" class="active">开始所有动画</button>
+        <button id="stop-all">停止所有动画</button>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/animejs@4.0.0-beta.3/lib/anime.min.js"></script>
     <script>
-        const skyContainer = document.getElementById('night-sky-container');
-        const sky = document.getElementById('night-sky');
-        const moon = document.querySelector('.moon'); // 獲取月亮元素
-        const STAR_COUNT = 300;
-        const SHOOTING_STAR_COUNT = 10;
-        const starColors = ['blue', 'yellow', 'white'];
-
-        // --- 星星和流星創建邏輯 (與之前類似) ---
-        for (let i = 0; i < STAR_COUNT; i++) {
-            const star = document.createElement('div');
-            star.classList.add('star');
-            const colorClass = starColors[Math.floor(Math.random() * starColors.length)];
-            star.classList.add(colorClass);
-
-            const size = Math.random() * 2.5 + 1.5; // 星星視覺大小 (1.5 to 4)
-            // 使用 CSS 變數來設定視覺大小，使其不受父元素 transform:scale 影響
-            star.style.setProperty('--star-visual-scale', size);
-
-            star.style.top = `${Math.random() * 100}%`;
-            star.style.left = `${Math.random() * 100}%`;
-            star.style.opacity = Math.random() * 0.7 + 0.3;
-            sky.appendChild(star);
-        }
-
-        for (let i = 0; i < SHOOTING_STAR_COUNT; i++) {
-            const shootingStar = document.createElement('div');
-            shootingStar.classList.add('shooting-star');
-            shootingStar.style.top = `${Math.random() * 50}%`;
-            shootingStar.style.left = `${Math.random() * 100}%`;
-            // 流星添加到 container，使其不受 sky 的 transform 影響
-            skyContainer.appendChild(shootingStar);
-        }
-
-        // --- 動畫邏輯 (與之前類似) ---
-        const starTimeline = anime.timeline({ autoplay: true, loop: true });
-        starTimeline.add({
-            targets: '.star',
-            opacity: () => [anime.random(0.1, 0.4), anime.random(0.5, 1)],
-            // 改變 --star-visual-scale 來閃爍，而不是直接 scale
-            '--star-visual-scale': () => [anime.random(1, 1.5), anime.random(2, 4)],
-            duration: () => anime.random(1000, 3000),
-            delay: anime.stagger(50, {from: 'random'}),
-            easing: 'easeInOutSine',
-            direction: 'alternate',
-            loop: true
+        // 天气效果控制变量
+        let animationsRunning = true;
+        let windInterval, rainInterval, sunInterval, snowInterval;
+        
+        // 初始化所有天气效果
+        document.addEventListener('DOMContentLoaded', () => {
+            initWind();
+            initRain();
+            initSun();
+            initSnow();
+            
+            // 按钮事件监听
+            document.getElementById('start-all').addEventListener('click', startAllAnimations);
+            document.getElementById('stop-all').addEventListener('click', stopAllAnimations);
         });
-
-        function animateShootingStar(star) {
-            const startX = Math.random() * window.innerWidth + window.innerWidth * 0.2; // 從右側或下方開始
-            const startY = -100; // 從頂部外開始
-            const endX = startX - (window.innerWidth * 1.2 + Math.random() * 500); // 移向左側
-            const endY = window.innerHeight * 1.2; // 移向底部外
-            const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI - 90; // 計算角度
-
-            anime({
-                targets: star,
-                left: [`${startX}px`, `${endX}px`],
-                top: [`${startY}px`, `${endY}px`],
-                opacity: [0, 1, 0],
-                rotate: `${angle}deg`, // 根據軌跡旋轉
-                duration: anime.random(800, 1600),
-                delay: anime.random(1000, 10000),
-                easing: 'easeInExpo', // 流星加速
-                complete: function() {
-                    // 不需要重置位置，每次重新計算起始點
-                    setTimeout(() => {
-                        animateShootingStar(star);
-                    }, anime.random(5000, 20000)); // 更長的隨機間隔
+        
+        // 开始所有动画
+        function startAllAnimations() {
+            if (!animationsRunning) {
+                animationsRunning = true;
+                initWind();
+                initRain();
+                initSun();
+                initSnow();
+                document.getElementById('start-all').classList.add('active');
+                document.getElementById('stop-all').classList.remove('active');
+            }
+        }
+        
+        // 停止所有动画
+        function stopAllAnimations() {
+            if (animationsRunning) {
+                animationsRunning = false;
+                clearInterval(windInterval);
+                clearInterval(rainInterval);
+                clearInterval(sunInterval);
+                clearInterval(snowInterval);
+                document.getElementById('stop-all').classList.add('active');
+                document.getElementById('start-all').classList.remove('active');
+            }
+        }
+        
+        // 初始化风效果
+        function initWind() {
+            const windCard = document.getElementById('wind-card');
+            
+            // 创建云朵
+            for (let i = 0; i < 3; i++) {
+                createCloud(windCard, i);
+            }
+            
+            // 创建树
+            createTree(windCard);
+            
+            // 定期创建新的云朵
+            if (animationsRunning) {
+                windInterval = setInterval(() => {
+                    if (windCard.querySelectorAll('.cloud').length < 6) {
+                        createCloud(windCard, Math.random() * 3);
+                    }
+                }, 3000);
+            }
+        }
+        
+        // 创建云朵
+        function createCloud(card, order) {
+            const cloud = document.createElement('div');
+            cloud.classList.add('cloud');
+            
+            const size = 30 + Math.random() * 40;
+            const topPosition = 50 + order * 60;
+            const duration = 15 + Math.random() * 10;
+            
+            cloud.style.width = size * 2 + 'px';
+            cloud.style.height = size + 'px';
+            cloud.style.top = topPosition + 'px';
+            cloud.style.left = '-100px';
+            cloud.style.animation = `moveCloud ${duration}s linear forwards`;
+            
+            // 为云朵创建不规则形状
+            const bubbles = Math.floor(3 + Math.random() * 3);
+            for (let i = 0; i < bubbles; i++) {
+                const bubble = document.createElement('div');
+                bubble.style.position = 'absolute';
+                bubble.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+                bubble.style.borderRadius = '50%';
+                bubble.style.width = (size * 0.7) + 'px';
+                bubble.style.height = (size * 0.7) + 'px';
+                bubble.style.top = (Math.random() * 10) + 'px';
+                bubble.style.left = (i * (size / 2)) + 'px';
+                cloud.appendChild(bubble);
+            }
+            
+            card.appendChild(cloud);
+            
+            // 动画结束时移除云朵
+            setTimeout(() => {
+                if (card.contains(cloud)) {
+                    card.removeChild(cloud);
                 }
+            }, duration * 1000);
+        }
+        
+        // 创建树
+        function createTree(card) {
+            const tree = document.createElement('div');
+            tree.classList.add('tree');
+            tree.style.left = '125px';
+            tree.style.height = '100px';
+            tree.style.animation = 'swayTree 3s ease-in-out infinite';
+            
+            const treeTop = document.createElement('div');
+            treeTop.classList.add('tree-top');
+            treeTop.style.left = '-20px';
+            treeTop.style.bottom = '90px';
+            treeTop.style.animation = 'swayTree 3s ease-in-out infinite';
+            
+            card.appendChild(tree);
+            card.appendChild(treeTop);
+        }
+        
+        // 初始化雨效果
+        function initRain() {
+            const rainCard = document.getElementById('rain-card');
+            
+            // 创建初始雨滴
+            for (let i = 0; i < 15; i++) {
+                createRaindrop(rainCard);
+            }
+            
+            // 定期创建新的雨滴
+            if (animationsRunning) {
+                rainInterval = setInterval(() => {
+                    createRaindrop(rainCard);
+                    
+                    // 随机创建水坑涟漪
+                    if (Math.random() < 0.3) {
+                        createRipple(rainCard);
+                    }
+                }, 100);
+            }
+        }
+        
+        // 创建雨滴
+        function createRaindrop(card) {
+            const raindrop = document.createElement('div');
+            raindrop.classList.add('rain-drop');
+            
+            const height = 10 + Math.random() * 15;
+            const duration = 0.8 + Math.random() * 0.5;
+            const leftPosition = Math.random() * 250;
+            
+            raindrop.style.height = height + 'px';
+            raindrop.style.left = leftPosition + 'px';
+            raindrop.style.top = '-10px';
+            raindrop.style.animation = `rainFall ${duration}s linear forwards`;
+            
+            card.appendChild(raindrop);
+            
+            // 动画结束时移除雨滴
+            setTimeout(() => {
+                if (card.contains(raindrop)) {
+                    card.removeChild(raindrop);
+                }
+            }, duration * 1000);
+        }
+        
+        // 创建水坑涟漪
+        function createRipple(card) {
+            const ripple = document.createElement('div');
+            ripple.classList.add('ripple');
+            
+            const left = 75 + Math.random() * 100;
+            ripple.style.left = left + 'px';
+            ripple.style.bottom = '20px';
+            ripple.style.animation = 'expandRipple 2s linear forwards';
+            
+            card.appendChild(ripple);
+            
+            // 动画结束时移除涟漪
+            setTimeout(() => {
+                if (card.contains(ripple)) {
+                    card.removeChild(ripple);
+                }
+            }, 2000);
+        }
+        
+        // 初始化太阳效果
+        function initSun() {
+            const sunCard = document.getElementById('sun-card');
+            
+            // 创建太阳
+            const sun = document.createElement('div');
+            sun.classList.add('sun');
+            sun.style.top = '120px';
+            sun.style.left = '125px';
+            sun.style.animation = 'pulseGlow 4s infinite';
+            
+            sunCard.appendChild(sun);
+            
+            // 创建太阳光线
+            const rayContainer = document.createElement('div');
+            rayContainer.style.position = 'absolute';
+            rayContainer.style.top = '120px';
+            rayContainer.style.left = '125px';
+            rayContainer.style.width = '0';
+            rayContainer.style.height = '0';
+            rayContainer.style.animation = 'rotateRay 20s linear infinite';
+            
+            for (let i = 0; i < 12; i++) {
+                const ray = document.createElement('div');
+                ray.classList.add('ray');
+                ray.style.width = '40px';
+                ray.style.transform = `rotate(${i * 30}deg)`;
+                rayContainer.appendChild(ray);
+            }
+            
+            sunCard.appendChild(rayContainer);
+            
+            // 创建随机闪烁的光点
+            if (animationsRunning) {
+                sunInterval = setInterval(() => {
+                    createSunSparkle(sunCard);
+                }, 500);
+            }
+        }
+        
+        // 创建阳光闪烁
+        function createSunSparkle(card) {
+            const sparkle = document.createElement('div');
+            sparkle.style.position = 'absolute';
+            sparkle.style.width = '5px';
+            sparkle.style.height = '5px';
+            sparkle.style.backgroundColor = '#fff';
+            sparkle.style.borderRadius = '50%';
+            sparkle.style.boxShadow = '0 0 10px 2px rgba(255, 255, 255, 0.7)';
+            
+            const left = Math.random() * 250;
+            const top = Math.random() * 350;
+            
+            sparkle.style.left = left + 'px';
+            sparkle.style.top = top + 'px';
+            sparkle.style.opacity = '0';
+            sparkle.style.animation = 'drift 2s ease-in-out';
+            
+            // 淡入淡出效果
+            sparkle.animate([
+                { opacity: 0 },
+                { opacity: 1 },
+                { opacity: 0 }
+            ], {
+                duration: 2000,
+                easing: 'ease-in-out'
             });
+            
+            card.appendChild(sparkle);
+            
+            // 动画结束时移除闪光
+            setTimeout(() => {
+                if (card.contains(sparkle)) {
+                    card.removeChild(sparkle);
+                }
+            }, 2000);
         }
-        document.querySelectorAll('.shooting-star').forEach(star => {
-            animateShootingStar(star);
-        });
-
-        anime({
-            targets: '.moon',
-            boxShadow: [
-                '0 0 30px rgba(249, 243, 217, 0.8)',
-                '0 0 45px rgba(249, 243, 217, 1)',
-                '0 0 30px rgba(249, 243, 217, 0.8)'
-            ],
-            duration: 4000,
-            easing: 'easeInOutSine',
-            direction: 'alternate',
-            loop: true
-        });
-
-
-        // --- 觸控縮放與平移邏輯 ---
-        let currentScale = 1;
-        let currentTranslateX = 0;
-        let currentTranslateY = 0;
-
-        let isPinching = false;
-        let initialDistance = 0;
-        let pinchCenterX = 0;
-        let pinchCenterY = 0;
-
-        let isPanning = false;
-        let panStartX = 0;
-        let panStartY = 0;
-        let initialTranslateX = 0;
-        let initialTranslateY = 0;
-
-        const MIN_SCALE = 0.5;
-        const MAX_SCALE = 4;
-
-        // 更新 Transform 的函數
-        function applyTransform() {
-            // 限制平移範圍，防止天空完全移出視窗
-            const skyRect = sky.getBoundingClientRect(); // 獲取當前實際尺寸和位置
-            const containerRect = skyContainer.getBoundingClientRect();
-
-            // 計算縮放後的尺寸
-            const scaledWidth = containerRect.width * currentScale;
-            const scaledHeight = containerRect.height * currentScale;
-
-            // 限制 X 軸平移
-            const minTranslateX = containerRect.width - scaledWidth; // 負數或 0
-            const maxTranslateX = 0;
-            currentTranslateX = Math.max(minTranslateX, Math.min(maxTranslateX, currentTranslateX));
-
-            // 限制 Y 軸平移
-            const minTranslateY = containerRect.height - scaledHeight; // 負數或 0
-            const maxTranslateY = 0;
-            currentTranslateY = Math.max(minTranslateY, Math.min(maxTranslateY, currentTranslateY));
-
-            sky.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`;
-
-            // --- 更新固定大小元素的縮放 ---
-            // 星星的大小通過 CSS 變數控制，已經處理
-            // 月亮需要反向縮放以保持視覺大小不變
-            const moonScale = 1 / currentScale;
-            moon.style.setProperty('--moon-visual-scale', moonScale);
+        
+        // 初始化雪效果
+        function initSnow() {
+            const snowCard = document.getElementById('snow-card');
+            
+            // 创建初始雪花
+            for (let i = 0; i < 10; i++) {
+                createSnowflake(snowCard, Math.random() * 350);
+            }
+            
+            // 定期创建新的雪花
+            if (animationsRunning) {
+                snowInterval = setInterval(() => {
+                    createSnowflake(snowCard, -10);
+                }, 300);
+            }
         }
-
-        // 計算兩點間距離
-        function getDistance(touch1, touch2) {
-            const dx = touch1.clientX - touch2.clientX;
-            const dy = touch1.clientY - touch2.clientY;
-            return Math.sqrt(dx * dx + dy * dy);
+        
+        // 创建雪花
+        function createSnowflake(card, startY) {
+            const snowflake = document.createElement('div');
+            snowflake.classList.add('snowflake');
+            
+            const size = 10 + Math.random() * 15;
+            const duration = 5 + Math.random() * 5;
+            const leftPosition = Math.random() * 250;
+            
+            // 使用Unicode雪花字符或自定义雪花
+            snowflake.innerHTML = '❅';
+            snowflake.style.fontSize = size + 'px';
+            snowflake.style.left = leftPosition + 'px';
+            snowflake.style.top = startY + 'px';
+            snowflake.style.animation = `snowFall ${duration}s linear forwards, drift ${duration/2}s ease-in-out infinite`;
+            
+            card.appendChild(snowflake);
+            
+            // 动画结束时移除雪花
+            setTimeout(() => {
+                if (card.contains(snowflake)) {
+                    card.removeChild(snowflake);
+                }
+            }, duration * 1000);
         }
-
-        // 計算兩點中心
-        function getCenter(touch1, touch2) {
-            return {
-                x: (touch1.clientX + touch2.clientX) / 2,
-                y: (touch1.clientY + touch2.clientY) / 2
-            };
-        }
-
-        skyContainer.addEventListener('touchstart', (e) => {
-            // e.preventDefault(); // 通常需要阻止默認行為，但 touch-action: none 已經處理
-
-            if (e.touches.length === 2) {
-                isPinching = true;
-                isPanning = false; // 停止平移
-                initialDistance = getDistance(e.touches[0], e.touches[1]);
-                const center = getCenter(e.touches[0], e.touches[1]);
-                // 計算縮放中心點相對於 sky 元素左上角的位置
-                const skyRect = sky.getBoundingClientRect();
-                pinchCenterX = (center.x - skyRect.left) / currentScale;
-                pinchCenterY = (center.y - skyRect.top) / currentScale;
-                // pinchCenterX = (center.x - currentTranslateX) / currentScale; // 相對於容器，未縮放前
-                // pinchCenterY = (center.y - currentTranslateY) / currentScale;
-
-            } else if (e.touches.length === 1 && currentScale > 1) { // 只有縮放後才允許單指平移
-                isPanning = true;
-                isPinching = false; // 停止縮放
-                panStartX = e.touches[0].clientX;
-                panStartY = e.touches[0].clientY;
-                initialTranslateX = currentTranslateX;
-                initialTranslateY = currentTranslateY;
-                skyContainer.style.cursor = 'grabbing';
-            }
-        });
-
-        skyContainer.addEventListener('touchmove', (e) => {
-           // e.preventDefault();
-
-            if (isPinching && e.touches.length === 2) {
-                const currentDistance = getDistance(e.touches[0], e.touches[1]);
-                const scaleDelta = currentDistance / initialDistance;
-                let newScale = currentScale * scaleDelta;
-
-                // 限制縮放比例
-                newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-
-                // 計算新的中心點
-                const newCenter = getCenter(e.touches[0], e.touches[1]);
-
-                // --- 計算新的 translate，使縮放中心保持在手指下方 ---
-                // 核心邏輯：
-                // 1. 找出縮放中心點 (pinchCenterX, pinchCenterY) 在新縮放比例下的預期 viewport 位置
-                //    expectedViewportX = newTranslateX + pinchCenterX * newScale
-                //    expectedViewportY = newTranslateY + pinchCenterY * newScale
-                // 2. 我們希望這個預期位置等於當前手指中心 (newCenter.x, newCenter.y)
-                //    newCenter.x = newTranslateX + pinchCenterX * newScale
-                //    newCenter.y = newTranslateY + pinchCenterY * newScale
-                // 3. 解出 newTranslateX 和 newTranslateY
-                const newTranslateX = newCenter.x - pinchCenterX * newScale;
-                const newTranslateY = newCenter.y - pinchCenterY * newScale;
-
-                // 更新狀態
-                currentScale = newScale;
-                currentTranslateX = newTranslateX;
-                currentTranslateY = newTranslateY;
-                initialDistance = currentDistance; // 更新初始距離以便連續縮放
-
-                applyTransform();
-
-            } else if (isPanning && e.touches.length === 1) {
-                const panCurrentX = e.touches[0].clientX;
-                const panCurrentY = e.touches[0].clientY;
-
-                const deltaX = panCurrentX - panStartX;
-                const deltaY = panCurrentY - panStartY;
-
-                currentTranslateX = initialTranslateX + deltaX;
-                currentTranslateY = initialTranslateY + deltaY;
-
-                applyTransform();
-            }
-        });
-
-        skyContainer.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) {
-                isPinching = false;
-            }
-            if (e.touches.length < 1) {
-                isPanning = false;
-                skyContainer.style.cursor = 'grab';
-            }
-            // 保存最後的狀態（如果需要的話）
-            initialTranslateX = currentTranslateX;
-            initialTranslateY = currentTranslateY;
-        });
-
-        // --- 添加桌面鼠標滾輪縮放和拖動 ---
-        let isDragging = false;
-        skyContainer.addEventListener('wheel', (e) => {
-            e.preventDefault(); // 阻止頁面滾動
-
-            const scaleAmount = -e.deltaY * 0.001; // 調整滾輪縮放速度
-            let newScale = currentScale * (1 + scaleAmount);
-            newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-
-            // 計算鼠標指針相對於 sky 元素的位置作為縮放中心
-            const skyRect = sky.getBoundingClientRect();
-            const mouseX = (e.clientX - skyRect.left) / currentScale;
-            const mouseY = (e.clientY - skyRect.top) / currentScale;
-
-            // 計算新的 translate
-            const newTranslateX = e.clientX - mouseX * newScale;
-            const newTranslateY = e.clientY - mouseY * newScale;
-
-            currentScale = newScale;
-            currentTranslateX = newTranslateX;
-            currentTranslateY = newTranslateY;
-
-            applyTransform();
-        });
-
-        skyContainer.addEventListener('mousedown', (e) => {
-            if (e.button === 0) { // 只響應左鍵
-                isDragging = true;
-                panStartX = e.clientX;
-                panStartY = e.clientY;
-                initialTranslateX = currentTranslateX;
-                initialTranslateY = currentTranslateY;
-                skyContainer.style.cursor = 'grabbing';
-            }
-        });
-
-        skyContainer.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                const deltaX = e.clientX - panStartX;
-                const deltaY = e.clientY - panStartY;
-                currentTranslateX = initialTranslateX + deltaX;
-                currentTranslateY = initialTranslateY + deltaY;
-                applyTransform();
-            }
-        });
-
-        skyContainer.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                skyContainer.style.cursor = 'grab';
-                // 保存狀態
-                initialTranslateX = currentTranslateX;
-                initialTranslateY = currentTranslateY;
-            }
-        });
-        skyContainer.addEventListener('mouseleave', () => { // 如果鼠標移出容器，也停止拖動
-             if (isDragging) {
-                isDragging = false;
-                skyContainer.style.cursor = 'grab';
-                initialTranslateX = currentTranslateX;
-                initialTranslateY = currentTranslateY;
-            }
-        });
-
-        // 初始應用一次 transform
-        applyTransform();
-
     </script>
 </body>
 </html>
