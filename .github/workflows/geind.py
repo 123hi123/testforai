@@ -1,7 +1,7 @@
 import os
 import re
-import time
 import json
+import subprocess
 from datetime import datetime
 
 # 格式化文件大小的函數
@@ -12,6 +12,66 @@ def format_size(size_bytes):
         return f"{size_bytes/1024:.1f} KB"
     else:
         return f"{size_bytes/(1024*1024):.1f} MB"
+
+# 從Git獲取文件的最後修改時間
+def get_git_modified_time(file_path):
+    try:
+        # 獲取文件最後一次修改的Git提交時間
+        git_time = subprocess.check_output(
+            ['git', 'log', '-1', '--format=%at', file_path], 
+            stderr=subprocess.STDOUT
+        ).decode('utf-8').strip()
+        
+        if git_time:
+            return int(git_time)
+    except:
+        pass
+    
+    # 如果Git信息獲取失敗，則使用文件系統的修改時間
+    return os.path.getmtime(file_path)
+
+# 從Git獲取文件的創建時間（首次提交時間）
+def get_git_creation_time(file_path):
+    try:
+        # 獲取文件首次提交的Git時間
+        git_time = subprocess.check_output(
+            ['git', 'log', '--follow', '--format=%at', '--reverse', file_path], 
+            stderr=subprocess.STDOUT
+        ).decode('utf-8').strip().split('\n')[0]
+        
+        if git_time:
+            return int(git_time)
+    except:
+        pass
+    
+    # 如果Git信息獲取失敗，則使用文件系統的創建時間（如果可用）或修改時間
+    try:
+        return os.path.getctime(file_path)  # Windows支持，但在某些Unix系統上可能是元數據更改時間
+    except:
+        return os.path.getmtime(file_path)
+
+# 從HTML文件中提取預覽內容
+def extract_preview(file_path, max_length=200):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+            # 移除HTML標籤、腳本和樣式
+            content = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', content, flags=re.DOTALL)
+            content = re.sub(r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>', '', content, flags=re.DOTALL)
+            content = re.sub(r'<[^>]*>', ' ', content)
+            
+            # 移除多餘空白
+            content = re.sub(r'\s+', ' ', content).strip()
+            
+            # 截取預覽文本
+            preview = content[:max_length]
+            if len(content) > max_length:
+                preview += "..."
+                
+            return preview
+    except:
+        return "無法生成預覽"
 
 # 獲取所有 HTML 文件及其元數據
 html_files = []
@@ -27,9 +87,12 @@ for root, dirs, files in os.walk('.'):
             # 獲取文件大小
             size_bytes = os.path.getsize(path)
             
-            # 獲取最後修改時間
-            mod_time = os.path.getmtime(path)
+            # 獲取Git提交時間
+            mod_time = get_git_modified_time(path)
+            create_time = get_git_creation_time(path)
+            
             mod_time_str = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
+            create_time_str = datetime.fromtimestamp(create_time).strftime('%Y-%m-%d %H:%M:%S')
             
             # 嘗試從文件中提取標題
             title = file
@@ -42,14 +105,20 @@ for root, dirs, files in os.walk('.'):
             except:
                 pass  # 如果讀取失敗，使用文件名作為標題
             
+            # 提取預覽內容
+            preview = extract_preview(path)
+            
             html_files.append({
                 "name": file,
                 "path": url_path,
                 "title": title,
+                "preview": preview,
                 "size": size_bytes,
                 "size_formatted": format_size(size_bytes),
                 "modified": mod_time,
-                "modified_formatted": mod_time_str
+                "modified_formatted": mod_time_str,
+                "created": create_time,
+                "created_formatted": create_time_str
             })
 
 # 生成 index.html
@@ -156,6 +225,7 @@ html_content = """<!DOCTYPE html>
             display: flex;
             gap: 10px;
             margin: 10px 0;
+            flex-wrap: wrap;
         }
         
         .sort-btn {
@@ -187,7 +257,7 @@ html_content = """<!DOCTYPE html>
         
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
@@ -201,6 +271,7 @@ html_content = """<!DOCTYPE html>
             display: flex;
             flex-direction: column;
             border: 1px solid var(--border-color);
+            height: 100%;
         }
         
         .file-card:hover {
@@ -234,36 +305,79 @@ html_content = """<!DOCTYPE html>
         .file-card-body {
             padding: 15px;
             flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .file-preview {
+            background-color: rgba(0,0,0,0.02);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #555;
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            max-height: 100px;
+            line-height: 1.5;
+        }
+        
+        .file-preview::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(transparent, var(--card-bg));
         }
         
         .file-meta {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
             color: #666;
             font-size: 0.85rem;
-            margin-bottom: 15px;
+            margin-top: auto;
+        }
+        
+        .file-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
         .file-card-footer {
             padding: 15px;
             text-align: center;
             border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
         }
         
-        .view-btn {
+        .btn {
+            flex: 1;
             display: inline-block;
             background-color: var(--primary-color);
             color: white;
             text-decoration: none;
-            padding: 8px 20px;
+            padding: 8px 12px;
             border-radius: 4px;
             transition: background-color 0.2s;
-            width: 100%;
-            box-sizing: border-box;
+            text-align: center;
         }
         
-        .view-btn:hover {
+        .btn:hover {
             background-color: var(--secondary-color);
+        }
+        
+        .btn-preview {
+            background-color: #6c757d;
+        }
+        
+        .btn-preview:hover {
+            background-color: #5a6268;
         }
         
         .no-results {
@@ -284,9 +398,70 @@ html_content = """<!DOCTYPE html>
             border-top: 1px solid var(--border-color);
         }
         
+        /* 預覽模態框 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            position: relative;
+            background-color: var(--bg-color);
+            margin: 2% auto;
+            padding: 0;
+            width: 90%;
+            max-width: 1200px;
+            height: 90%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: normal;
+        }
+        
+        .modal-close {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0 10px;
+        }
+        
+        .modal-body {
+            height: calc(100% - 60px);
+        }
+        
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
         @media (max-width: 768px) {
             .file-grid {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             }
             
             .controls {
@@ -296,7 +471,12 @@ html_content = """<!DOCTYPE html>
             
             .sort-controls {
                 margin-top: 10px;
-                flex-wrap: wrap;
+            }
+            
+            .modal-content {
+                width: 95%;
+                height: 95%;
+                margin: 2.5% auto;
             }
         }
         
@@ -307,6 +487,10 @@ html_content = """<!DOCTYPE html>
             
             h1 {
                 font-size: 1.8rem;
+            }
+            
+            .file-card-footer {
+                flex-direction: column;
             }
         }
         
@@ -325,6 +509,14 @@ html_content = """<!DOCTYPE html>
             #search {
                 background-color: #333;
                 color: #e1e1e1;
+            }
+            
+            .file-preview {
+                background-color: rgba(255,255,255,0.05);
+            }
+            
+            .file-preview::after {
+                background: linear-gradient(transparent, var(--card-bg));
             }
         }
     </style>
@@ -348,6 +540,9 @@ html_content = """<!DOCTYPE html>
                 <button class="sort-btn active" data-sort="modified" data-order="desc">
                     <i class="fas fa-calendar-alt"></i> 最後修改
                 </button>
+                <button class="sort-btn" data-sort="created" data-order="desc">
+                    <i class="fas fa-history"></i> 創建時間
+                </button>
                 <button class="sort-btn" data-sort="name" data-order="asc">
                     <i class="fas fa-font"></i> 文件名
                 </button>
@@ -362,6 +557,19 @@ html_content = """<!DOCTYPE html>
         
         <div class="file-grid" id="file-grid">
             <!-- 文件卡片將由 JavaScript 動態生成 -->
+        </div>
+    </div>
+    
+    <!-- 預覽模態框 -->
+    <div id="preview-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">文件預覽</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <iframe id="preview-iframe" class="preview-iframe" src=""></iframe>
+            </div>
         </div>
     </div>
     
@@ -420,6 +628,30 @@ html_content = """<!DOCTYPE html>
                     sortAndRenderFiles();
                 });
             });
+            
+            // 模態框關閉按鈕
+            document.getElementById('modal-close').addEventListener('click', function() {
+                document.getElementById('preview-modal').style.display = 'none';
+            });
+            
+            // 點擊模態框外部關閉
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('preview-modal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+        
+        // 打開預覽模態框
+        function openPreview(filePath, title) {
+            const modal = document.getElementById('preview-modal');
+            const iframe = document.getElementById('preview-iframe');
+            const modalTitle = document.getElementById('modal-title');
+            
+            iframe.src = filePath;
+            modalTitle.textContent = title;
+            modal.style.display = 'block';
         }
         
         // 排序並渲染文件
@@ -428,7 +660,7 @@ html_content = """<!DOCTYPE html>
             
             // 過濾文件
             const filteredFiles = files.filter(file => {
-                const searchString = `${file.title} ${file.name} ${file.path}`.toLowerCase();
+                const searchString = `${file.title} ${file.name} ${file.path} ${file.preview}`.toLowerCase();
                 return searchString.includes(searchTerm);
             });
             
@@ -449,6 +681,10 @@ html_content = """<!DOCTYPE html>
                     case 'size':
                         valueA = a.size;
                         valueB = b.size;
+                        break;
+                    case 'created':
+                        valueA = a.created;
+                        valueB = b.created;
                         break;
                     case 'modified':
                     default:
@@ -490,13 +726,20 @@ html_content = """<!DOCTYPE html>
                         <p class="file-path">${file.path}</p>
                     </div>
                     <div class="file-card-body">
+                        <div class="file-preview">${file.preview}</div>
                         <div class="file-meta">
-                            <span><i class="far fa-calendar-alt"></i> ${file.modified_formatted}</span>
-                            <span><i class="fas fa-file"></i> ${file.size_formatted}</span>
+                            <div class="file-meta-item"><i class="far fa-calendar-plus"></i> 創建: ${file.created_formatted}</div>
+                            <div class="file-meta-item"><i class="far fa-calendar-alt"></i> 修改: ${file.modified_formatted}</div>
+                            <div class="file-meta-item"><i class="fas fa-file"></i> ${file.size_formatted}</div>
                         </div>
                     </div>
                     <div class="file-card-footer">
-                        <a href="${file.path}" class="view-btn" target="_blank">查看文件</a>
+                        <a href="${file.path}" class="btn" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> 查看
+                        </a>
+                        <button class="btn btn-preview" onclick="openPreview('${file.path}', '${file.title.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-eye"></i> 預覽
+                        </button>
                     </div>
                 `;
                 
