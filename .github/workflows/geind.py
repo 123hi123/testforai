@@ -4,6 +4,15 @@ import time
 import json
 from datetime import datetime
 
+# 格式化文件大小的函數
+def format_size(size_bytes):
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes/1024:.1f} KB"
+    else:
+        return f"{size_bytes/(1024*1024):.1f} MB"
+
 # 獲取所有 HTML 文件及其元數據
 html_files = []
 for root, dirs, files in os.walk('.'):
@@ -42,15 +51,6 @@ for root, dirs, files in os.walk('.'):
                 "modified": mod_time,
                 "modified_formatted": mod_time_str
             })
-
-# 格式化文件大小
-def format_size(size_bytes):
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
-        return f"{size_bytes/1024:.1f} KB"
-    else:
-        return f"{size_bytes/(1024*1024):.1f} MB"
 
 # 生成 index.html
 html_content = """<!DOCTYPE html>
