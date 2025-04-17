@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Animated Weather Cards</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+/* ----------  global layout & theming  ---------- */
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#111;
+  color:#fff;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding:24px
+}
+.controls{
+  margin-bottom:24px
+}
+button{
+  padding:8px 16px;
+  margin:0 4px 8px;
+  background:#333;
+  border:none;
+  border-radius:8px;
+  color:#fff;
+  cursor:pointer;
+  transition:background .25s
+}
+button:hover{background:#555}
+
+.container{
+  display:flex;
+  flex-wrap:wrap;
+  gap:24px;
+  justify-content:center
+}
+.card{
+  position:relative;
+  width:180px;
+  height:220px;
+  background:#1e1e1e;
+  border-radius:20px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.card.hidden{display:none}
+
+/* ----------  SUN  ---------- */
+.card.sun .sun{
+  position:absolute;
+  width:86px;height:86px;
+  border-radius:50%;
+  background:#f7d358;
+  box-shadow:0 0 22px 6px #f7d358;
+  animation:pulse 4s linear infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+.card.sun .ray{
+  position:absolute;
+  width:6px;height:30px;
+  background:#f7d358;
+  top:calc(50% - 15px);left:calc(50% - 3px);
+  transform-origin:center -40px;
+  animation:spin 8s linear infinite;
+}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* ----------  RAIN  ---------- */
+.card.rain .drop{
+  position:absolute;
+  width:2px;height:12px;
+  background:#4daaff;
+  bottom:100%;
+  opacity:.8;
+  animation:raindrop 1s linear infinite;
+}
+@keyframes raindrop{
+  0%{transform:translateY(0);opacity:.8}
+  90%{opacity:.8}
+  100%{transform:translateY(232px);opacity:0}
+}
+
+/* ----------  WIND  ---------- */
+.card.wind .cloud{
+  position:absolute;
+  width:80px;height:40px;
+  background:#ddd;border-radius:40px;
+  left:-110px;top:60px;
+  animation:cloudMove 8s linear infinite;
+}
+.card.wind .cloud:before,
+.card.wind .cloud:after{
+  content:'';
+  position:absolute;background:#ddd;border-radius:50%
+}
+.card.wind .cloud:before{width:52px;height:52px;left:8px;top:-20px}
+.card.wind .cloud:after{width:64px;height:64px;left:28px;top:-12px}
+
+@keyframes cloudMove{0%{left:-110px}100%{left:210px}}
+
+.card.wind .line{
+  position:absolute;
+  width:60px;height:2px;
+  background:#9ecfff;
+  left:-90px;top:145px;
+  opacity:0;
+  animation:windLine 3s linear infinite;
+}
+@keyframes windLine{
+  0%{left:-90px;opacity:0}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{left:240px;opacity:0}
+}
+
+/* ----------  SNOW  ---------- */
+.card.snow .flake{
+  position:absolute;
+  color:#fff;
+  user-select:none;pointer-events:none;
+  animation:snowFall 5s linear infinite;
+}
+@keyframes snowFall{
+  0%{transform:translateY(-40px) rotate(0deg)}
+  100%{transform:translateY(240px) rotate(360deg)}
+}
+</style>
+</head>
+<body>
+
+<!-- controls -->
+<div class="controls">
+  <button data-show="all">All</button>
+  <button data-show="wind">Wind</button>
+  <button data-show="rain">Rain</button>
+  <button data-show="sun">Sun</button>
+  <button data-show="snow">Snow</button>
+</div>
+
+<!-- cards -->
+<div class="container">
+  <!-- WIND -->
+  <div class="card wind" id="windCard">
+    <div class="cloud"></div>
+    <div class="line"></div>
+    <div class="line" style="animation-delay:1s;top:165px"></div>
+  </div>
+
+  <!-- RAIN -->
+  <div class="card rain" id="rainCard"></div>
+
+  <!-- SUN -->
+  <div class="card sun" id="sunCard">
+    <div class="sun"></div>
+    <!-- 8 rays, pre‑rotated -->
+    <div class="ray" style="transform:rotate(0deg)"></div>
+    <div class="ray" style="transform:rotate(45deg)"></div>
+    <div class="ray" style="transform:rotate(90deg)"></div>
+    <div class="ray" style="transform:rotate(135deg)"></div>
+    <div class="ray" style="transform:rotate(180deg)"></div>
+    <div class="ray" style="transform:rotate(225deg)"></div>
+    <div class="ray" style="transform:rotate(270deg)"></div>
+    <div class="ray" style="transform:rotate(315deg)"></div>
+  </div>
+
+  <!-- SNOW -->
+  <div class="card snow" id="snowCard"></div>
+</div>
+
+<script>
+/* -------- build particle effects -------- */
+function createRain(card, n=60){
+  for(let i=0;i<n;i++){
+    const d=document.createElement('div');
+    d.className='drop';
+    d.style.left=Math.random()*180+'px';
+    d.style.animationDelay=Math.random()+'s';
+    d.style.animationDuration=(.5+Math.random()*.8)+'s';
+    card.appendChild(d);
+  }
+}
+function createSnow(card,n=40){
+  const glyphs=['❆','❅','✻','✼'];
+  for(let i=0;i<n;i++){
+    const f=document.createElement('div');
+    f.className='flake';
+    f.textContent=glyphs[Math.random()*glyphs.length|0];
+    f.style.left=Math.random()*180+'px';
+    const sz=.8+Math.random()*1.2;
+    f.style.fontSize=sz+'rem';
+    f.style.animationDelay=Math.random()*5+'s';
+    f.style.animationDuration=(3+Math.random()*5)+'s';
+    card.appendChild(f);
+  }
+}
+createRain(document.getElementById('rainCard'));
+createSnow(document.getElementById('snowCard'));
+
+/* -------- simple filter buttons -------- */
+document.querySelectorAll('.controls button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const show=btn.dataset.show;
+    document.querySelectorAll('.card').forEach(c=>{
+      c.classList.toggle('hidden', show!=='all' && !c.classList.contains(show));
+    });
+  });
+});
+</script>
+</body>
+</html>
