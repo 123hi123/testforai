@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Weather Cards</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+        }
+
+        .weather-card {
+            width: 250px;
+            height: 350px;
+            background-color: #1e1e2f;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .card-title {
+            text-align: center;
+            color: white;
+            padding: 15px 0;
+            font-size: 1.5rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            position: relative;
+        }
+
+        .animation-container {
+            position: absolute;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+        }
+
+        /* Wind Animation Styles */
+        .cloud {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+        }
+
+        .tree {
+            position: absolute;
+            bottom: 0;
+            width: 8px;
+            background-color: #5d4037;
+        }
+
+        .tree-top {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 60px solid #2e7d32;
+            transform-origin: bottom center;
+        }
+
+        .wind-line {
+            position: absolute;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.5);
+            transform-origin: left center;
+        }
+
+        /* Rain Animation Styles */
+        .raindrop {
+            position: absolute;
+            width: 2px;
+            background-color: #a8c6fa;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .puddle {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(168, 198, 250, 0.3);
+            border-radius: 50%;
+        }
+
+        /* Sun Animation Styles */
+        .sun {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: #ffcc33;
+            border-radius: 50%;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 50px #ffcc33;
+        }
+
+        .sun-ray {
+            position: absolute;
+            width: 4px;
+            background-color: #ffcc33;
+            transform-origin: bottom center;
+        }
+
+        /* Snow Animation Styles */
+        .snowflake {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+
+        .snow-ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50% 50% 0 0;
+        }
+
+        /* Weather controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            margin: 0 10px;
+            padding: 8px 16px;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .control-btn:hover {
+            background-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="weather-card" id="wind-card">
+            <div class="card-title">Wind</div>
+            <div class="animation-container" id="wind-animation"></div>
+        </div>
+
+        <div class="weather-card" id="rain-card">
+            <div class="card-title">Rain</div>
+            <div class="animation-container" id="rain-animation"></div>
+        </div>
+
+        <div class="weather-card" id="sun-card">
+            <div class="card-title">Sun</div>
+            <div class="animation-container" id="sun-animation"></div>
+        </div>
+
+        <div class="weather-card" id="snow-card">
+            <div class="card-title">Snow</div>
+            <div class="animation-container" id="snow-animation"></div>
+        </div>
+    </div>
+
+    <script>
+        // Wind Animation
+        function createWindAnimation() {
+            const container = document.getElementById('wind-animation');
+            container.innerHTML = '';
+            
+            // Create clouds
+            for (let i = 0; i < 5; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                const size = 30 + Math.random() * 50;
+                cloud.style.width = `${size}px`;
+                cloud.style.height = `${size * 0.6}px`;
+                cloud.style.top = `${20 + Math.random() * 150}px`;
+                cloud.style.left = `${-100 + Math.random() * 50}px`;
+                cloud.style.opacity = `${0.6 + Math.random() * 0.4}`;
+                container.appendChild(cloud);
+
+                // Animate clouds
+                animateCloud(cloud);
+            }
+            
+            // Create trees (for wind visualization)
+            for (let i = 0; i < 3; i++) {
+                const tree = document.createElement('div');
+                tree.className = 'tree';
+                tree.style.height = `${60 + Math.random() * 40}px`;
+                tree.style.left = `${50 + i * 70}px`;
+                container.appendChild(tree);
+                
+                const treeTop = document.createElement('div');
+                treeTop.className = 'tree-top';
+                treeTop.style.bottom = `${parseFloat(tree.style.height)}px`;
+                treeTop.style.left = `${parseFloat(tree.style.left) - 26}px`;
+                container.appendChild(treeTop);
+                
+                // Animate tree top
+                animateTreeTop(treeTop);
+            }
+            
+            // Create wind lines
+            for (let i = 0; i < 15; i++) {
+                const windLine = document.createElement('div');
+                windLine.className = 'wind-line';
+                windLine.style.width = `${20 + Math.random() * 60}px`;
+                windLine.style.top = `${20 + Math.random() * 250}px`;
+                windLine.style.left = `${Math.random() * 100}px`;
+                windLine.style.opacity = `${0.2 + Math.random() * 0.3}`;
+                windLine.style.transform = `rotate(${Math.random() * 10}deg)`;
+                container.appendChild(windLine);
+
+                // Animate wind lines
+                animateWindLine(windLine);
+            }
+        }
+
+        function animateCloud(cloud) {
+            const speed = 2 + Math.random() * 3;
+            let position = parseFloat(cloud.style.left);
+            
+            function moveCloud() {
+                position += speed;
+                
+                if (position > 300) {
+                    position = -100;
+                    cloud.style.top = `${20 + Math.random() * 150}px`;
+                }
+                
+                cloud.style.left = `${position}px`;
+                requestAnimationFrame(moveCloud);
+            }
+            
+            moveCloud();
+        }
+        
+        function animateTreeTop(treeTop) {
+            let angle = 0;
+            let direction = 1;
+            const speed = 0.1 + Math.random() * 0.2;
+            
+            function swayTree() {
+                angle += speed * direction;
+                
+                if (angle > 15) direction = -1;
+                if (angle < -15) direction = 1;
+                
+                treeTop.style.transform = `rotate(${angle}deg)`;
+                requestAnimationFrame(swayTree);
+            }
+            
+            swayTree();
+        }
+
+        function animateWindLine(windLine) {
+            let opacity = parseFloat(windLine.style.opacity);
+            const fadeSpeed = 0.01 + Math.random() * 0.02;
+            
+            function fadeWindLine() {
+                opacity -= fadeSpeed;
+                
+                if (opacity <= 0) {
+                    opacity = 0.5 + Math.random() * 0.3;
+                    windLine.style.top = `${20 + Math.random() * 250}px`;
+                    windLine.style.left = `${Math.random() * 100}px`;
+                    windLine.style.width = `${20 + Math.random() * 60}px`;
+                }
+                
+                windLine.style.opacity = opacity;
+                requestAnimationFrame(fadeWindLine);
+            }
+            
+            fadeWindLine();
+        }
+
+        // Rain Animation
+        function createRainAnimation() {
+            const container = document.getElementById('rain-animation');
+            container.innerHTML = '';
+            
+            // Create raindrops
+            for (let i = 0; i < 50; i++) {
+                const raindrop = document.createElement('div');
+                raindrop.className = 'raindrop';
+                raindrop.style.left = `${Math.random() * 100}%`;
+                raindrop.style.top = `${-50 + Math.random() * 50}px`;
+                raindrop.style.height = `${10 + Math.random() * 20}px`;
+                raindrop.style.opacity = `${0.5 + Math.random() * 0.5}`;
+                container.appendChild(raindrop);
+
+                // Animate raindrops
+                animateRaindrop(raindrop);
+            }
+            
+            // Create puddle
+            const puddle = document.createElement('div');
+            puddle.className = 'puddle';
+            puddle.style.width = '60%';
+            puddle.style.height = '10px';
+            container.appendChild(puddle);
+            
+            // Animate puddle
+            animatePuddle(puddle);
+        }
+
+        function animateRaindrop(raindrop) {
+            const speed = 5 + Math.random() * 10;
+            let position = parseFloat(raindrop.style.top);
+            
+            function moveRaindrop() {
+                position += speed;
+                
+                if (position > 280) {
+                    position = -20;
+                    raindrop.style.left = `${Math.random() * 100}%`;
+                }
+                
+                raindrop.style.top = `${position}px`;
+                requestAnimationFrame(moveRaindrop);
+            }
+            
+            moveRaindrop();
+        }
+
+        function animatePuddle(puddle) {
+            let size = 60;
+            let growing = true;
+            
+            function changePuddleSize() {
+                if (growing) {
+                    size += 0.2;
+                    if (size >= 85) growing = false;
+                } else {
+                    size -= 0.2;
+                    if (size <= 60) growing = true;
+                }
+                
+                puddle.style.width = `${size}%`;
+                requestAnimationFrame(changePuddleSize);
+            }
+            
+            changePuddleSize();
+        }
+
+        // Sun Animation
+        function createSunAnimation() {
+            const container = document.getElementById('sun-animation');
+            container.innerHTML = '';
+            
+            // Create sun
+            const sun = document.createElement('div');
+            sun.className = 'sun';
+            container.appendChild(sun);
+            
+            // Create sun rays
+            for (let i = 0; i < 12; i++) {
+                const sunRay = document.createElement('div');
+                sunRay.className = 'sun-ray';
+                sunRay.style.height = `${30 + Math.random() * 40}px`;
+                sunRay.style.transform = `rotate(${i * 30}deg)`;
+                
+                const sunCenter = {
+                    x: 125,
+                    y: 90
+                };
+                
+                const angle = i * 30 * (Math.PI / 180);
+                const rayX = sunCenter.x + 40 * Math.cos(angle) - 2;
+                const rayY = sunCenter.y + 40 * Math.sin(angle);
+                
+                sunRay.style.left = `${rayX}px`;
+                sunRay.style.top = `${rayY}px`;
+                
+                container.appendChild(sunRay);
+                
+                // Animate sun rays
+                animateSunRay(sunRay, i);
+            }
+            
+            // Animate sun
+            animateSun(sun);
+        }
+
+        function animateSun(sun) {
+            let scale = 1;
+            let growing = true;
+            
+            function pulseSun() {
+                if (growing) {
+                    scale += 0.002;
+                    if (scale >= 1.1) growing = false;
+                } else {
+                    scale -= 0.002;
+                    if (scale <= 1) growing = true;
+                }
+                
+                sun.style.transform = `translateX(-50%) scale(${scale})`;
+                sun.style.boxShadow = `0 0 ${50 * scale}px #ffcc33`;
+                
+                requestAnimationFrame(pulseSun);
+            }
+            
+            pulseSun();
+        }
+
+        function animateSunRay(ray, index) {
+            const delay = index * 100;
+            let opacity = 0.5;
+            let length = parseFloat(ray.style.height);
+            let growing = index % 2 === 0;
+            
+            setTimeout(() => {
+                function pulseRay() {
+                    if (growing) {
+                        length += 0.2;
+                        opacity += 0.01;
+                        if (length >= parseFloat(ray.style.height) + 15 || opacity >= 1) growing = false;
+                    } else {
+                        length -= 0.2;
+                        opacity -= 0.01;
+                        if (length <= parseFloat(ray.style.height) - 15 || opacity <= 0.5) growing = true;
+                    }
+                    
+                    ray.style.height = `${length}px`;
+                    ray.style.opacity = opacity;
+                    
+                    requestAnimationFrame(pulseRay);
+                }
+                
+                pulseRay();
+            }, delay);
+        }
+
+        // Snow Animation
+        function createSnowAnimation() {
+            const container = document.getElementById('snow-animation');
+            container.innerHTML = '';
+            
+            // Create snowflakes
+            for (let i = 0; i < 40; i++) {
+                const snowflake = document.createElement('div');
+                snowflake.className = 'snowflake';
+                snowflake.style.width = `${3 + Math.random() * 5}px`;
+                snowflake.style.height = snowflake.style.width;
+                snowflake.style.left = `${Math.random() * 100}%`;
+                snowflake.style.top = `${-50 + Math.random() * 50}px`;
+                container.appendChild(snowflake);
+
+                // Animate snowflakes
+                animateSnowflake(snowflake);
+            }
+            
+            // Create snow piling up at the bottom
+            const snowPile = document.createElement('div');
+            snowPile.className = 'snow-ground';
+            snowPile.style.height = '0';
+            container.appendChild(snowPile);
+            
+            // Animate snow pile
+            animateSnowPile(snowPile);
+        }
+
+        function animateSnowflake(snowflake) {
+            const speedY = 1 + Math.random() * 2;
+            const speedX = Math.random() * 1 - 0.5;
+            let positionY = parseFloat(snowflake.style.top);
+            let positionX = parseFloat(snowflake.style.left);
+            
+            function moveSnowflake() {
+                positionY += speedY;
+                positionX += Math.sin(positionY / 30) * 0.5;
+                
+                if (positionY > 280) {
+                    positionY = -10;
+                    positionX = Math.random() * 100;
+                }
+                
+                if (positionX < 0) positionX = 100;
+                if (positionX > 100) positionX = 0;
+                
+                snowflake.style.top = `${positionY}px`;
+                snowflake.style.left = `${positionX}%`;
+                
+                requestAnimationFrame(moveSnowflake);
+            }
+            
+            moveSnowflake();
+        }
+
+        function animateSnowPile(snowPile) {
+            let height = 0;
+            const maxHeight = 50;
+            
+            function increaseSnowPile() {
+                if (height < maxHeight) {
+                    height += 0.1;
+                    snowPile.style.height = `${height}px`;
+                }
+                
+                requestAnimationFrame(increaseSnowPile);
+            }
+            
+            increaseSnowPile();
+        }
+
+        // Function to reset and restart animations
+        function resetAnimations() {
+            createWindAnimation();
+            createRainAnimation();
+            createSunAnimation();
+            createSnowAnimation();
+        }
+
+        // Initialize all animations
+        document.addEventListener('DOMContentLoaded', () => {
+            resetAnimations();
+        });
+    </script>
+</body>
+</html>
