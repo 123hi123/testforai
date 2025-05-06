@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Pokédex (First 50)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- Start Embedded CSS --- */
+
+        /* Basic Reset & Font */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-family: 'Press Start 2P', cursive;
+            color: #e3350d; /* Red */
+            text-shadow: 2px 2px #3b4cca; /* Blue */
+        }
+
+        /* Pokédex Layout */
+        #pokedex {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #dedede;
+            border: 5px solid #a0a0a0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Pokémon List Styling */
+        #pokemon-list-container {
+            flex: 1; /* Takes up available space */
+            min-width: 200px; /* Minimum width */
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 600px; /* Limit height and make scrollable */
+            overflow-y: auto;
+        }
+
+        #pokemon-list-container h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1em;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #3b4cca;
+        }
+
+        #pokemon-list {
+            list-style: none;
+        }
+
+        #pokemon-list li {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            text-transform: capitalize;
+        }
+
+        #pokemon-list li:hover {
+            background-color: #e0e0e0;
+        }
+        #pokemon-list li.active {
+            background-color: #3b4cca; /* Blue */
+            color: white;
+            font-weight: bold;
+            transform: scale(1.02);
+        }
+
+        /* Pokémon Details Card Styling */
+        #pokemon-details-container {
+            flex: 2; /* Takes up more space */
+            min-width: 350px; /* Minimum width */
+        }
+
+        .pokemon-card {
+            background-color: #fff;
+            border: 5px solid #3b4cca; /* Blue border */
+            border-radius: 10px;
+            padding: 20px;
+            display: flex; /* Arrange display and info side-by-side */
+            flex-direction: column; /* Stack vertically initially */
+            align-items: center; /* Center items */
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+            min-height: 450px; /* Ensure minimum height */
+            position: relative; /* For loading message positioning */
+        }
+
+        /* Display Area (Sprite, Name, ID) */
+        #pokemon-display {
+            background-color: #555; /* Screen color */
+            border: 3px solid #333;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            width: 90%;
+            position: relative;
+        }
+
+        #pokemon-sprite {
+            display: block;
+            margin: 10px auto;
+            width: 120px; /* Fixed size for sprite */
+            height: 120px;
+            object-fit: contain; /* Ensure sprite fits well */
+            image-rendering: pixelated; /* Keep pixel art sharp */
+            background-color: #eee; /* Light background for sprite */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            /* Add a simple loading animation */
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* Stop pulsing once loaded */
+        #pokemon-sprite:not([src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"]) {
+            animation: none;
+        }
+
+
+        .pokemon-id {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8em;
+            color: #ddd;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .pokemon-name {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.2em;
+            color: #fff;
+            text-transform: capitalize;
+            margin-bottom: 10px;
+            min-height: 1.2em; /* Prevent layout shift */
+        }
+
+        #loading-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+            font-size: 0.8em;
+        }
+
+        /* Info Area (Types, Measurements, Stats) */
+        #pokemon-info {
+            width: 100%;
+            padding: 0 10px;
+        }
+
+        .info-section {
+            margin-bottom: 15px;
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            min-height: 50px; /* Prevent collapse */
+        }
+
+        .info-section h3 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            color: #3b4cca;
+            text-align: center;
+        }
+
+        /* Types Styling */
+        .types span {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 2px 3px; /* Added margin for wrapping */
+            border-radius: 15px;
+            color: white;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Measurements */
+        .measurements p {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .measurements span {
+             font-weight: bold;
+        }
+
+
+        /* Stats Styling */
+        #pokemon-stats {
+            list-style: none;
+            padding: 0;
+        }
+
+        #pokemon-stats li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .stat-name {
+            flex-basis: 80px; /* Adjusted width for stat names */
+            flex-shrink: 0; /* Prevent shrinking */
+            text-transform: capitalize;
+            font-weight: bold;
+            color: #555;
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden;
+            text-overflow: ellipsis; /* Add ellipsis if name is too long */
+        }
+        .stat-value {
+            font-weight: bold;
+            min-width: 30px; /* Ensure space for value */
+            text-align: right;
+            margin-left: 5px;
+        }
+
+        .stat-bar-container {
+            flex-grow: 1; /* Takes remaining space */
+            height: 12px;
+            background-color: #e0e0e0;
+            border-radius: 6px;
+            margin-left: 10px;
+            overflow: hidden; /* Keep bar inside */
+            border: 1px solid #ccc;
+        }
+
+        .stat-bar {
+            height: 100%;
+            background-color: #4CAF50; /* Default green */
+            border-radius: 6px;
+            transition: width 0.5s ease-in-out; /* Animate bar */
+        }
+
+        /* --- Type Colors --- */
+        .type-normal { background-color: #A8A77A; }
+        .type-fire { background-color: #EE8130; }
+        .type-water { background-color: #6390F0; }
+        .type-electric { background-color: #F7D02C; }
+        .type-grass { background-color: #7AC74C; }
+        .type-ice { background-color: #96D9D6; }
+        .type-fighting { background-color: #C22E28; }
+        .type-poison { background-color: #A33EA1; }
+        .type-ground { background-color: #E2BF65; }
+        .type-flying { background-color: #A98FF3; }
+        .type-psychic { background-color: #F95587; }
+        .type-bug { background-color: #A6B91A; }
+        .type-rock { background-color: #B6A136; }
+        .type-ghost { background-color: #735797; }
+        .type-dragon { background-color: #6F35FC; }
+        .type-dark { background-color: #705746; }
+        .type-steel { background-color: #B7B7CE; }
+        .type-fairy { background-color: #D685AD; }
+
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            #pokedex {
+                flex-direction: column; /* Stack list and details vertically */
+            }
+            #pokemon-list-container {
+                max-height: 250px; /* Shorter list height on small screens */
+            }
+             .pokemon-card {
+                min-height: auto; /* Adjust min height */
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            #pokemon-list-container, #pokemon-details-container {
+                min-width: auto; /* Remove min-width */
+                width: 100%;
+            }
+            .pokemon-name {
+                font-size: 1em;
+            }
+            #pokemon-sprite {
+                width: 100px;
+                height: 100px;
+            }
+            .stat-name {
+                flex-basis: 70px; /* Even smaller stat names */
+            }
+            .types span {
+                font-size: 0.8em;
+                padding: 4px 8px;
+            }
+            .measurements p, #pokemon-stats li {
+                font-size: 0.85em;
+            }
+        }
+        /* --- End Embedded CSS --- */
+    </style>
+</head>
+<body>
+    <h1>Pokédex</h1>
+    <div id="pokedex">
+        <div id="pokemon-list-container">
+            <h2>Pokémon List</h2>
+            <ul id="pokemon-list">
+                <!-- Pokémon names will be loaded here -->
+                <li>Loading...</li>
+            </ul>
+        </div>
+
+        <div id="pokemon-details-container">
+            <div id="pokemon-details" class="pokemon-card">
+                <div id="pokemon-display">
+                    <span class="pokemon-id">#---</span>
+                    <h2 class="pokemon-name">Select a Pokémon</h2>
+                    <!-- Using a blank pixel GIF as initial src to avoid broken image icon -->
+                    <img id="pokemon-sprite" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Pokémon Sprite" style="width: 120px; height: 120px;">
+                     <p id="loading-message" style="display: none;">Loading details...</p>
+                </div>
+                <div id="pokemon-info">
+                    <div class="info-section types" id="pokemon-types">
+                        <h3>Types</h3>
+                        <!-- Types will load here -->
+                    </div>
+                     <div class="info-section measurements">
+                        <p>Height: <span id="pokemon-height">--</span> m</p>
+                        <p>Weight: <span id="pokemon-weight">--</span> kg</p>
+                    </div>
+                    <div class="info-section stats">
+                        <h3>Base Stats</h3>
+                        <ul id="pokemon-stats">
+                           <!-- Stats will load here -->
+                           <li>HP: --</li>
+                           <li>Attack: --</li>
+                           <li>Defense: --</li>
+                           <li>Sp. Atk: --</li>
+                           <li>Sp. Def: --</li>
+                           <li>Speed: --</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Start Embedded JavaScript ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const pokemonListElement = document.getElementById('pokemon-list');
+            const pokemonDetailsElement = document.getElementById('pokemon-details');
+            const pokemonSpriteElement = document.getElementById('pokemon-sprite');
+            const pokemonNameElement = pokemonDetailsElement.querySelector('.pokemon-name');
+            const pokemonIdElement = pokemonDetailsElement.querySelector('.pokemon-id');
+            const pokemonTypesElement = document.getElementById('pokemon-types');
+            const pokemonHeightElement = document.getElementById('pokemon-height');
+            const pokemonWeightElement = document.getElementById('pokemon-weight');
+            const pokemonStatsElement = document.getElementById('pokemon-stats');
+            const pokemonInfoElement = document.getElementById('pokemon-info'); // Get info container for opacity toggle
+            const loadingMessageElement = document.getElementById('loading-message');
+
+
+            const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2/pokemon';
+            const POKEMON_COUNT = 50; // Fetch first 50 Pokémon
+
+            let pokemonList = []; // To store fetched list data
+            let currentActiveListItem = null;
+
+            // --- Fetch Initial Pokémon List ---
+            async function fetchPokemonList() {
+                try {
+                    const response = await fetch(`${POKEAPI_BASE_URL}?limit=${POKEMON_COUNT}&offset=0`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    pokemonList = data.results;
+                    displayPokemonList(pokemonList);
+                } catch (error) {
+                    console.error("Error fetching Pokémon list:", error);
+                    pokemonListElement.innerHTML = '<li>Error loading Pokémon. Please try again later.</li>';
+                    displayErrorState("Could not load Pokémon list."); // Show error in details panel too
+                }
+            }
+
+            // --- Display Pokémon List ---
+            function displayPokemonList(pokemons) {
+                pokemonListElement.innerHTML = ''; // Clear loading message
+                pokemons.forEach((pokemon, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${index + 1}. ${pokemon.name}`;
+                    listItem.dataset.pokemonName = pokemon.name; // Store name for fetching details
+                    listItem.dataset.pokemonIndex = index;
+
+                    listItem.addEventListener('click', () => {
+                         // Remove active class from previous item
+                        if (currentActiveListItem) {
+                            currentActiveListItem.classList.remove('active');
+                        }
+                        // Add active class to clicked item
+                        listItem.classList.add('active');
+                        currentActiveListItem = listItem;
+
+                        // Fetch details for the clicked Pokémon
+                        fetchPokemonDetails(pokemon.name);
+                    });
+
+                    pokemonListElement.appendChild(listItem);
+                });
+            }
+
+            // --- Fetch Individual Pokémon Details ---
+            async function fetchPokemonDetails(pokemonName) {
+                showLoadingState(true);
+                clearDetails(); // Clear previous details immediately
+                try {
+                    // Add a small delay to make loading visible on fast connections
+                    await new Promise(resolve => setTimeout(resolve, 150));
+
+                    const response = await fetch(`${POKEAPI_BASE_URL}/${pokemonName}`);
+                    if (!response.ok) {
+                         if (response.status === 404) {
+                            throw new Error(`Pokémon "${pokemonName}" not found.`);
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const pokemonData = await response.json();
+                    displayPokemonDetails(pokemonData);
+                } catch (error) {
+                    console.error(`Error fetching details for ${pokemonName}:`, error);
+                    displayErrorState(`Failed to load ${pokemonName}. ${error.message}`);
+                } finally {
+                    showLoadingState(false);
+                }
+            }
+
+            // --- Clear Details Panel ---
+            function clearDetails() {
+                 pokemonNameElement.textContent = 'Loading...';
+                 pokemonIdElement.textContent = '#---';
+                 // Set back to blank pixel or placeholder
+                 pokemonSpriteElement.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                 pokemonSpriteElement.alt = 'Loading sprite...';
+                 pokemonTypesElement.innerHTML = '<h3>Types</h3>';
+                 pokemonHeightElement.textContent = '--';
+                 pokemonWeightElement.textContent = '--';
+                 pokemonStatsElement.innerHTML = `<li>Loading stats...</li>`;
+            }
+
+             // --- Display Pokémon Details ---
+            function displayPokemonDetails(data) {
+                // Basic Info
+                pokemonNameElement.textContent = data.name;
+                pokemonIdElement.textContent = `#${data.id.toString().padStart(3, '0')}`;
+
+                // Sprite (Try animated first, fallback to default static)
+                const animatedSprite = data.sprites.versions?.['generation-v']?.['black-white']?.animated?.front_default;
+                const defaultSprite = data.sprites.front_default;
+                const officialArt = data.sprites.other?.['official-artwork']?.front_default;
+
+                // Use animated if available, otherwise official art, then default, then placeholder
+                pokemonSpriteElement.src = animatedSprite || officialArt || defaultSprite || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                pokemonSpriteElement.alt = data.name;
+
+
+                // Height & Weight (Convert from decimetres/hectograms)
+                pokemonHeightElement.textContent = (data.height / 10).toFixed(1); // decimetres to metres
+                pokemonWeightElement.textContent = (data.weight / 10).toFixed(1); // hectograms to kilograms
+
+                // Types
+                pokemonTypesElement.innerHTML = '<h3>Types</h3>'; // Clear previous types header/content
+                if (data.types.length > 0) {
+                    data.types.forEach(typeInfo => {
+                        const typeSpan = document.createElement('span');
+                        typeSpan.textContent = typeInfo.type.name;
+                        typeSpan.classList.add(`type-${typeInfo.type.name}`); // Add class for styling
+                        pokemonTypesElement.appendChild(typeSpan);
+                    });
+                } else {
+                     pokemonTypesElement.innerHTML += '<span>Unknown</span>';
+               
