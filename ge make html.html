@@ -1,0 +1,572 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深入研究n8n的Telegram Bot消息发送玩法</title>
+    <script>MathJax={chtml:{fontURL:'https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2'}}</script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js" defer></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+<style>
+html,body{height:100%;margin:0;scroll-behavior:smooth}
+body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;line-height:1.7;background-color:#f8faff;color:#374151;padding:10px;box-sizing:border-box;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+.container{max-width:1100px;margin:10px auto;padding:20px;background-color:#fff;border-radius:.45rem;box-shadow:0 .4rem 1.2rem rgba(0,0,0,.06)}
+.material-icons-outlined{vertical-align:middle;font-size:1.15em;margin-right:.3em;line-height:1}
+h1>.material-icons-outlined,h2>.material-icons-outlined{font-size:1.1em;margin-right:.4em;color:#007bff}
+h3>.material-icons-outlined,h4>.material-icons-outlined,h5>.material-icons-outlined{font-size:1.1em;margin-right:.4em;color:#4a5568}
+h1,h2,h3,h4,h5{color:#1f2937;margin:1.8em 0 1em;font-weight:600;display:flex;align-items:center;line-height:1.3}
+h1{font-size:2.6rem;letter-spacing:-.7px;border-bottom:1px solid #dde2e9;padding-bottom:.5em;margin:.0 0 .8em}
+h2{font-size:2.1rem;border-bottom:1px solid #eef2f5;padding-bottom:.55em}
+h3{font-size:1.7rem}h4{font-size:1.35rem;color:#525860}h5{font-size:1.15rem;color:#1f2937}
+.text-primary{color:#007bff}.text-secondary{color:#525860}.text-accent1{color:#17a2b8}.text-accent2{color:#28a745}.text-accent3{color:#ffc107}.text-danger{color:#dc3545;font-weight:700}.text-warning{color:#ff8f00;font-weight:700}.text-highlight-green{color:#20c997;font-weight:600}.text-highlight-blue{color:#339AF0;font-weight:600}.text-highlight-purple{color:#AE3EC9;font-weight:600}
+p{margin-bottom:1.4em;color:#4b5563;font-size:1.05rem}
+strong,.strong-emphasis{font-weight:600;color:#007bff}
+.prompt-container .strong-emphasis{color:#0056b3}
+.math-formula{font-size:1.3em;padding:25px;background-color:#f0f3f7;border-radius:.45rem;text-align:center;margin:30px 0;overflow-x:auto;border:1px solid #dfe5ec}
+.prompt-container .math-formula{margin:1.5em 0 2em}
+pre[class*=language-]{padding:1.7em;margin:1.2em 0;overflow:auto;border-radius:.45rem;box-shadow:0 4px 12px rgba(0,0,0,.08);border:1px solid #dde2e9;background:#2d2d2d}
+.prompt-container pre[class*=language-]{margin:1em 0 2em}
+code[class*=language-],pre[class*=language-]{font-family:"Fira Code","SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;font-size:.93rem;line-height:1.5}
+:not(pre)>code{font-family:"Fira Code","SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;background-color:#e9ecef;padding:.2em .4em;border-radius:.25rem;font-size:.9em;color:#bf0045}
+ul{list-style-type:none;padding-left:0}
+ul li{margin-bottom:.8em;padding-left:1.5em;position:relative}
+ul li .material-icons-outlined{position:absolute;left:0;top:4px;font-size:1.25em;color:#0277bd;margin-right:.5em}
+ul li:has(.material-icons-outlined){padding-left:2em}
+.note{background-color:#e6f7ff;border-left:4px solid #007bff;padding:15px;margin:1.5em 0;border-radius:.3rem}
+.note p:last-child{margin-bottom:0}
+.config-color-note .material-icons-outlined{color:#ff8f00;font-size:1.2em;vertical-align:text-bottom}
+#graph-container{width:100%;max-width:900px;margin:25px auto;padding-top:70px;box-sizing:border-box;background-color:#fff;border:1px solid #dde2e9;border-radius:.45rem;box-shadow:0 .4rem 1.2rem rgba(0,0,0,.06);position:relative;overflow:hidden}
+.prompt-container #graph-container{margin:30px 0}
+#graph-output{display:flex;justify-content:center;align-items:center;min-height:450px;padding:30px;background-color:#fff}
+#graph-output svg{display:block;width:100%;max-width:100%;height:auto}
+#graph-controls-container{position:absolute;top:20px;right:20px;display:flex;gap:14px;z-index:10}
+.graph-button{padding:9px 15px;background-color:rgba(50,50,50,.8);color:#f0f4f8;border:none;border-radius:.35rem;cursor:pointer;font-size:.88rem;opacity:.9;transition:opacity .2s ease,background-color .2s ease,transform .15s ease,box-shadow .15s ease;font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-weight:500;line-height:1.2;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 5px rgba(0,0,0,.12)}
+.graph-button:hover{opacity:1;background-color:rgba(30,30,30,.9);transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,.18)}
+.graph-button:active{transform:translateY(0);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.graph-button:disabled{opacity:.65;cursor:not-allowed;background-color:rgba(50,50,50,.8);transform:translateY(0);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.graph-button .svg-icon{width:1.25em;height:1.25em;fill:currentColor}
+.graph-button .material-icons-outlined{font-size:1.4em;margin-right:0}
+#layout-toggle-button{min-width:48px;font-weight:500;font-size:1rem}
+#layout-toggle-button.loading .material-icons-outlined{font-size:1.4em}
+@keyframes spin{to{transform:rotate(1turn)}}
+.icon-spin{animation:spin 1.5s linear infinite;display:inline-block}
+#zoom-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(25,28,32,.95);z-index:1000;justify-content:center;align-items:center;overflow:hidden;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+#zoom-content{position:relative;width:97%;height:97%;background-color:#fff;overflow:hidden;display:flex;justify-content:center;align-items:center;border-radius:calc(.45rem * 2);box-shadow:0 25px 60px rgba(0,0,0,.35)}
+#zoom-content svg{max-width:none;max-height:none;width:100%;height:100%;cursor:grab;display:block}
+#zoom-content svg:active{cursor:grabbing}
+#close-zoom{position:absolute;top:12px;right:12px;background:rgba(50,50,50,.85);color:#fff;border:none;border-radius:50%;width:48px;height:48px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1001;transition:background-color .25s ease;box-shadow:0 3px 12px rgba(0,0,0,.3)}
+#close-zoom:hover,#close-zoom:focus-visible{background:rgba(20,20,20,.95);outline:none}
+#close-zoom .material-icons-outlined{font-size:30px;margin-right:0}
+@media (max-width:768px){body{padding:10px;font-size:.96rem}.container{padding:15px;margin:10px auto}h1{font-size:2rem;margin-bottom:.7em}h2{font-size:1.6rem}h3{font-size:1.35rem}h4{font-size:1.15rem}h5{font-size:1rem}.prompt-container>h2:first-of-type{margin-top:.8em}.prompt-container h2{font-size:1.5rem}.prompt-container h3{font-size:1.25rem;margin-top:2em}.prompt-container h4{font-size:1.1rem;margin-top:1.6em}.prompt-container h5{font-size:1rem;margin-top:1.5em}pre[class*=language-]{font-size:.88rem;padding:1.2em}.math-formula{font-size:1.15em;padding:20px}#graph-container{padding-top:60px}.prompt-container #graph-container{margin:20px 0}#graph-controls-container{top:12px;right:12px;gap:8px}.graph-button{font-size:.8rem;padding:7px 10px}.graph-button .svg-icon,.graph-button .material-icons-outlined{font-size:1.25em}#layout-toggle-button{min-width:40px;font-size:.9rem}#layout-toggle-button.loading .material-icons-outlined{font-size:1.25em}#close-zoom{width:40px;height:40px}#close-zoom .material-icons-outlined{font-size:24px}}
+@media (max-width:480px){body{padding:5px}.container{padding:10px;margin:5px auto}h1{font-size:1.7rem;margin-bottom:.6em}h2{font-size:1.4rem}h3{font-size:1.2rem}h4{font-size:1.05rem}h5{font-size:.95rem}.prompt-container{padding:10px}.prompt-container>h2:first-of-type{margin-top:.6em}.prompt-container h2{font-size:1.3rem}.prompt-container h3{font-size:1.1rem;margin-top:1.8em}.prompt-container h4{font-size:1rem;margin-top:1.5em}.prompt-container h5{font-size:.9rem}.prompt-container p,.prompt-container li{font-size:.9rem}.prompt-container .mandatory-requirement{padding:8px 12px;font-size:.85rem}.prompt-container .mandatory-requirement .material-icons-outlined{font-size:1.2em}.prompt-container ul li{padding-left:1.2em}.prompt-container ul li:has(.material-icons-outlined){padding-left:1.8em}#graph-controls-container{flex-direction:column;align-items:flex-end;gap:8px}#graph-container{padding-top:140px}.graph-button{width:auto;min-width:130px;justify-content:flex-start}}
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="material-icons-outlined" aria-hidden="true">send</span> <span class="text-primary">深入探索 n8n Telegram Bot</span> <span class="text-secondary">消息发送技巧</span></h1>
+
+        <p><strong class="strong-emphasis">n8n</strong> 是一个强大的工作流自动化工具，允许您连接不同的应用程序和服务，创建复杂的自动化流程。结合 <strong class="strong-emphasis">Telegram Bot API</strong>，n8n 可以实现各种灵活和自动化的 Telegram 消息发送功能。本指南将深入探讨在 n8n 中使用 Telegram Bot 发送消息的各种“玩法”。</p>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">key</span>核心组件：n8n 中的 Telegram 节点</h2>
+        <p>在 n8n 中与 Telegram 交互主要通过 <strong class="text-highlight-blue">Telegram 节点</strong>。要发送消息，您通常会使用其 <strong class="text-highlight-green">"Send Message"</strong> 或类似的发送操作（如 Send Photo, Send Document 等）。</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">vpn_key</span><strong>Bot Token (凭证):</strong> 首先，您需要在 n8n 中配置 Telegram Bot API 凭证，这通常涉及到您的 Bot Token。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">person_pin</span><strong>Chat ID:</strong> 这是消息发送的目标。它可以是用户的 ID、群组 ID (通常为负数) 或频道 ID (通常以 <code>@channelusername</code> 或 <code>-100xxxxxxxxxx</code> 格式)。您可以使用 <code class="language-javascript">{{ $json.chatId }}</code> 这样的表达式动态传入 Chat ID。</li>
+        </ul>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">chat_bubble_outline</span>基础消息类型与发送</h2>
+        <p>n8n 的 Telegram 节点提供了发送多种基础消息类型的功能。</p>
+        <h3><span class="material-icons-outlined" aria-hidden="true">article</span>1. 文本消息 (Text)</h3>
+        <p>最常见的消息类型。在 n8n 节点中：</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">edit_note</span><strong>Text 字段:</strong> 输入您想发送的文本内容。支持使用 n8n 表达式动态生成，例如 <code>Hello {{ $json.name }}!</code>。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">text_format</span><strong>Parse Mode (解析模式):</strong> 这是一个<strong class="text-warning">关键选项</strong>，决定了文本如何被 Telegram 解析和显示。
+                <ul>
+                    <li><code>None</code>: 纯文本，不解析任何特殊格式。</li>
+                    <li><code>MarkdownV2</code>: 使用 MarkdownV2 语法进行格式化。</li>
+                    <li><code>HTML</code>: 使用 HTML 标签进行格式化。</li>
+                </ul>
+            </li>
+        </ul>
+        <h3><span class="material-icons-outlined" aria-hidden="true">image</span>2. 图片 (Photo)</h3>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">link</span><strong>Photo 字段:</strong> 可以是图片的 URL，也可以是<strong class="text-highlight-purple">二进制数据</strong> (例如，来自上一个 HTTP Request 节点或 Read Binary File 节点，使用表达式如 <code>={{ $binary.data }}</code>)。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">closed_caption</span><strong>Caption 字段:</strong> 图片的说明文字，同样支持 Parse Mode。</li>
+        </ul>
+        <h3><span class="material-icons-outlined" aria-hidden="true">audiotrack</span>3. 音频 (Audio), <span class="material-icons-outlined" aria-hidden="true">description</span>文档 (Document), <span class="material-icons-outlined" aria-hidden="true">videocam</span>视频 (Video), <span class="material-icons-outlined" aria-hidden="true">mic</span>语音 (Voice)</h3>
+        <p>这些类型的发送方式与图片类似：</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">attach_file</span>通常需要提供文件的 URL 或二进制数据。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">subtitles</span>支持添加 Caption (说明)。</li>
+            <li>对于视频和音频，还可以设置时长 (Duration)、表演者 (Performer)、标题 (Title) 等元数据，通常在 "Additional Fields" 或 "Options" 中配置。</li>
+        </ul>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">interests</span>交互式消息与键盘</h2>
+        <p>通过键盘可以极大增强 Bot 的交互性。</p>
+        <h3><span class="material-icons-outlined" aria-hidden="true">keyboard</span>1. 内联键盘 (Inline Keyboard)</h3>
+        <p>按钮会直接显示在消息下方，点击后可以发送回调数据 (Callback Data) 或打开 URL。</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">settings_ethernet</span>在 n8n 节点的 <strong class="text-highlight-blue">"Additional Fields"</strong> 或 <strong class="text-highlight-blue">"Options"</strong> 下，找到 <strong class="text-accent1"><code>reply_markup</code></strong> 参数。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">code</span>设置为 JSON 结构，例如：
+                <pre><code class="language-json">
+{
+  "inline_keyboard": [
+    [
+      { "text": "✅ 确认", "callback_data": "confirm_action" },
+      { "text": "❌ 取消", "callback_data": "cancel_action" }
+    ],
+    [
+      { "text": "访问网站", "url": "https://n8n.io" }
+    ]
+  ]
+}
+                </code></pre>
+            </li>
+            <li><span class="material-icons-outlined" aria-hidden="true">webhook</span>Callback Data 会通过 n8n 的 <strong class="text-highlight-green">Telegram Trigger</strong> 节点（设置为 "On Callback Query"）接收和处理。</li>
+        </ul>
+        <h3><span class="material-icons-outlined" aria-hidden="true">dialpad</span>2. 回复键盘 (Reply Keyboard)</h3>
+        <p>替换用户输入框下方的标准键盘，提供预设的回复选项。</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">settings_ethernet</span>同样在 <strong class="text-accent1"><code>reply_markup</code></strong> 中配置。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">code</span>JSON 结构示例：
+                <pre><code class="language-json">
+{
+  "keyboard": [
+    [{"text": "功能一"}, {"text": "功能二"}],
+    [{"text": "帮助文档"}]
+  ],
+  "resize_keyboard": true,
+  "one_time_keyboard": true,
+  "selective": false 
+}
+                </code></pre>
+            </li>
+            <li><span class="material-icons-outlined" aria-hidden="true">tune</span><strong>选项说明:</strong>
+                <ul>
+                    <li><code>resize_keyboard</code>: 自动调整键盘大小。</li>
+                    <li><code>one_time_keyboard</code>: 用户点击按钮后键盘自动隐藏。</li>
+                    <li><code>input_field_placeholder</code>: 输入框占位符。</li>
+                    <li><code>selective</code>: (高级) 只对特定用户显示键盘（例如被 @ 提及的用户或消息的发送者）。</li>
+                </ul>
+            </li>
+        </ul>
+        <h3><span class="material-icons-outlined" aria-hidden="true">keyboard_hide</span>3. 移除键盘 (Remove Keyboard)</h3>
+        <p>发送一条消息并移除当前的自定义回复键盘，恢复到标准键盘。</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">code</span><code>reply_markup</code> JSON: <code>{ "remove_keyboard": true, "selective": false }</code></li>
+        </ul>
+        <h3><span class="material-icons-outlined" aria-hidden="true">forum</span>4. 强制回复 (Force Reply)</h3>
+        <p>强制用户回复这条消息（用户会看到一个回复图标）。</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">code</span><code>reply_markup</code> JSON: <code>{ "force_reply": true, "input_field_placeholder": "请输入您的回复...", "selective": false }</code></li>
+        </ul>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">style</span>消息格式化 (Parse Mode)</h2>
+        <p>如前所述，<code>Parse Mode</code> 是控制消息外观的关键。</p>
+        <h3><span class="material-icons-outlined" aria-hidden="true">integration_instructions</span>1. MarkdownV2</h3>
+        <p>使用 MarkdownV2 语法。注意：<code>_</code>, <code>*</code>, <code>[</code>, <code>]</code>, <code>(</code>, <code>)</code>, <code>~</code>, <code>`</code>, <code>></code>, <code>#</code>, <code>+</code>, <code>-</code>, <code>=</code>, <code>|</code>, <code>{</code>, <code>}</code>, <code>.</code>, <code>!</code> 这些字符<strong class="text-danger">必须转义</strong> (在前面加 <code>\</code>)，除非它们用于构成 Markdown 实体。</p>
+        <pre><code class="language-markdown">
+*粗体*
+_斜体_
+__下划线__ (n8n中可能不直接支持，Telegram支持)
+~删除线~
+||剧透内容||
+`行内代码`
+[内联URL](http://www.example.com/)
+[内联提及用户](tg://user?id=123456789)
+```python
+# 预格式化代码块
+print("Hello, Telegram!")
+```
+        </code></pre>
+        <h3><span class="material-icons-outlined" aria-hidden="true">code_ μεγαλύτε</span>2. HTML</h3>
+        <p>支持部分 HTML 标签：</p>
+        <pre><code class="language-html">
+&lt;b&gt;粗体&lt;/b&gt;, &lt;strong&gt;粗体&lt;/strong&gt;
+&lt;i&gt;斜体&lt;/i&gt;, &lt;em&gt;斜体&lt;/em&gt;
+&lt;u&gt;下划线&lt;/u&gt;, &lt;ins&gt;下划线&lt;/ins&gt; (n8n中可能不直接支持，Telegram支持)
+&lt;s&gt;删除线&lt;/s&gt;, &lt;strike&gt;删除线&lt;/strike&gt;, &lt;del&gt;删除线&lt;/del&gt;
+&lt;tg-spoiler&gt;剧透内容&lt;/tg-spoiler&gt;
+&lt;a href="http://www.example.com/"&gt;内联URL&lt;/a&gt;
+&lt;a href="tg://user?id=123456789"&gt;内联提及用户&lt;/a&gt;
+&lt;code&gt;行内代码&lt;/code&gt;
+&lt;pre&gt;预格式化文本块&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-python"&gt;# 预格式化代码块
+print("Hello, Telegram!")&lt;/code&gt;&lt;/pre&gt;
+        </code></pre>
+        <p class="note"><span class="material-icons-outlined" aria-hidden="true">info</span> <strong class="text-warning">提示:</strong> 在 n8n 表达式中使用 Markdown 或 HTML 时，如果内容包含特殊字符，务必正确处理转义，否则可能导致发送失败或格式错误。</p>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">settings</span>高级发送选项</h2>
+        <p>Telegram 节点通常在 <strong class="text-highlight-blue">"Additional Fields"</strong> 或 <strong class="text-highlight-blue">"Options"</strong> 部分提供更多控制参数：</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">notifications_off</span><strong>Disable Notification (<code>disable_notification</code>):</strong> 发送静默消息，用户不会收到声音或震动提醒。值为 <code>true</code> 或 <code>false</code>。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">security</span><strong>Protect Content (<code>protect_content</code>):</strong> 保护消息内容，禁止转发和保存。值为 <code>true</code> 或 <code>false</code>。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">reply</span><strong>Reply To Message ID (<code>reply_to_message_id</code>):</strong> 将消息作为对特定消息的回复。需要提供被回复消息的 ID。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">question_answer</span><strong>Allow Sending Without Reply (<code>allow_sending_without_reply</code>):</strong> 如果 <code>reply_to_message_id</code> 指定的消息不存在，仍然发送该消息（而不是报错）。值为 <code>true</code> 或 <code>false</code>。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">forum</span><strong>Message Thread ID (<code>message_thread_id</code>):</strong> (适用于启用了话题功能的群组) 发送到特定话题。</li>
+        </ul>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">extension</span>其他消息类型玩法</h2>
+        <p>除了基础类型，n8n 的 Telegram 节点通常也支持发送其他特殊类型的消息，具体参数可能在 "Resource" 和 "Operation" 中选择，或通过 "Additional Fields" 配置。</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">sticky_note_2</span><strong>Sticker (贴纸):</strong> 发送贴纸。需要提供贴纸的 File ID 或 URL。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">location_on</span><strong>Location (位置):</strong> 发送地理位置。需要提供经度 (Longitude) 和纬度 (Latitude)。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">place</span><strong>Venue (地点):</strong> 发送地点信息，包括经纬度、标题、地址等。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">contacts</span><strong>Contact (联系人):</strong> 分享联系人信息，包括电话号码、名字等。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">poll</span><strong>Poll (投票):</strong> 创建普通投票或问答投票。需要设置问题 (Question) 和选项 (Options)。</li>
+        </ul>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">lan</span>n8n 工作流中的 Telegram 应用场景</h2>
+        <p>n8n 的强大之处在于构建完整的工作流，Telegram 消息发送是其中的一个环节。</p>
+        <div id="graph-container">
+            <div id="graph-controls-container">
+                <button id="zoom-button" class="graph-button" title="全屏查看与交互"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> <span>全屏</span></button>
+                <button id="layout-toggle-button" class="graph-button" title="切换布局方向"></button>
+                <button id="download-button" class="graph-button" title="下载 PNG 图片"><svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zm14-9h-4V3H9v8H5l7 7 7-7z"/></svg> <span>下载</span></button>
+            </div>
+            <div id="graph-output"><p style="padding:20px;text-align:center;color:#525860">图表加载中...</p></div>
+        </div>
+        <div id="zoom-modal" role="dialog" aria-modal="true" aria-labelledby="zoom-modal-title">
+            <div id="zoom-content"></div>
+            <button id="close-zoom" title="关闭全屏" aria-label="关闭全屏"><span class="material-icons-outlined" aria-hidden="true">close</span></button>
+            <h2 id="zoom-modal-title" style="display:none">图表全屏交互视图</h2>
+        </div>
+
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">notifications_active</span><strong>各类通知推送:</strong>
+                <ul>
+                    <li><span class="material-icons-outlined" aria-hidden="true">rss_feed</span>RSS 更新通知。</li>
+                    <li><span class="material-icons-outlined" aria-hidden="true">webhook</span>Webhook 接收到数据后通知。</li>
+                    <li><span class="material-icons-outlined" aria-hidden="true">schedule</span>定时任务 (Cron Job) 结果通知。</li>
+                    <li><span class="material-icons-outlined" aria-hidden="true">apps</span>其他应用事件通知 (如 Google Sheets 新增行、Trello 卡片移动、GitHub 新 PR 等)。</li>
+                </ul>
+            </li>
+            <li><span class="material-icons-outlined" aria-hidden="true">alarm</span><strong>定时提醒与报告:</strong> 使用 n8n 的 <strong class="text-highlight-green">Schedule Trigger</strong> 定期执行工作流，发送提醒或数据报告。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">dynamic_feed</span><strong>个性化内容投送:</strong> 从数据库或 API 获取数据，为不同用户生成<strong class="text-highlight-purple">定制化消息</strong>。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">smart_toy</span><strong>简单交互式机器人:</strong> 结合 <strong class="text-highlight-green">Telegram Trigger</strong> (接收消息/回调) 和 <strong class="text-accent1">Switch / IF 节点</strong>，根据用户输入或按钮点击做出不同响应。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">campaign</span><strong>消息广播 (谨慎使用):</strong> 通过循环遍历用户 ID列表 (例如从数据库获取) 来向多个用户发送消息。 <strong class="text-danger">注意:</strong> 务必遵守 Telegram 的反垃圾邮件政策和频率限制。</li>
+        </ul>
+        <h5><span class="material-icons-outlined" style="color:#28a745" aria-hidden="true">data_object</span><span class="text-accent2">n8n Telegram 节点参数示例 (发送内联键盘)</span></h5>
+        <p>这是一个 n8n 工作流中 Telegram 节点参数的 JSON 结构简化示例，展示了如何配置发送带有内联键盘的消息：</p>
+        <pre><code class="language-json">
+{
+  "parameters": {
+    "chatId": "{{ $json.chatId }}", // 或直接填写 Chat ID
+    "text": "请选择一个操作：",
+    "additionalFields": {
+      "reply_markup": { // 注意：实际n8n界面可能直接提供Inline Keyboard的UI配置
+        "inline_keyboard": [
+          [
+            { "text": "操作 A", "callback_data": "action_a" },
+            { "text": "操作 B", "callback_data": "action_b" }
+          ],
+          [
+            { "text": "访问 n8n 官网", "url": "https://n8n.io" }
+          ]
+        ]
+      }
+    }
+  },
+  "name": "Send Interactive Message",
+  "type": "n8n-nodes-base.telegram", // 节点类型可能随版本变化
+  "typeVersion": 1,
+  "credentials": {
+    "telegramApi": { // 引用您配置的Telegram凭证
+      "id": "YOUR_CREDENTIAL_ID",
+      "name": "My Telegram Bot Credentials"
+    }
+  }
+}
+        </code></pre>
+        <p class="note"><span class="material-icons-outlined" aria-hidden="true">build_circle</span> <strong class="text-primary">实际操作提示:</strong> 在 n8n 的图形化界面中，您通常不需要直接编辑 JSON。对于内联键盘、回复键盘等，n8n 节点会提供专门的 UI 字段来帮助您构建这些结构，例如 "Reply Markup" > "Add Inline Keyboard Row" > "Add Button"。</p>
+
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">edit</span>消息管理</h2>
+        <p>除了发送新消息，Telegram API 也允许对已发送的消息进行管理，n8n 的 Telegram 节点通常也支持这些操作，例如：</p>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">drive_file_rename_outline</span><strong>Edit Message Text (编辑消息文本):</strong> 修改已发送消息的文本内容。需要提供 <code>chat_id</code>、<code>message_id</code> 和新的 <code>text</code>。Parse Mode 和 Reply Markup 也可以一同更新。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">edit_attributes</span><strong>Edit Message Caption (编辑消息说明):</strong> 修改媒体消息的说明文字。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">burst_mode</span><strong>Edit Message Media (编辑消息媒体):</strong> 替换已发送消息的媒体内容 (图片、动图等)。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">touch_app</span><strong>Edit Message Reply Markup (编辑消息键盘):</strong> 更新已发送消息的内联键盘。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">delete_sweep</span><strong>Delete Message (删除消息):</strong> 删除已发送的消息。需要提供 <code>chat_id</code> 和 <code>message_id</code>。</li>
+        </ul>
+        <p>这些操作通常在 n8n Telegram 节点的 "Operation" 字段中选择，然后填写必要的参数。</p>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">gavel</span>重要注意事项</h2>
+        <ul>
+            <li><span class="material-icons-outlined" aria-hidden="true">speed</span><strong>API 频率限制:</strong> Telegram 对 Bot API 调用有频率限制。频繁发送大量消息可能导致 Bot 被临时限制。设计工作流时要考虑<strong class="text-warning">合理的延迟和批量处理策略</strong>。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">error_outline</span><strong>错误处理:</strong> 在 n8n 工作流中<strong class="strong-emphasis">添加错误处理机制</strong>。例如，如果 Telegram API 返回错误 (如无效的 Chat ID、消息格式错误)，您的工作流应该能够捕获并妥善处理，而不是意外中止。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">lock</span><strong>Bot Token 安全:</strong> 妥善保管您的 Bot Token，不要硬编码到工作流中或公开泄露。使用 n8n 的凭证管理功能。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">thumb_up_alt</span><strong>用户体验:</strong> <strong class="text-highlight-green">避免滥用 Bot 发送过多无关或骚扰信息</strong>。提供清晰的指令和退订机制 (如果适用)。</li>
+            <li><span class="material-icons-outlined" aria-hidden="true">help_outline</span><strong>获取 Chat ID:</strong>
+                <ul>
+                    <li>对于私聊，当用户给您的 Bot 发送消息时，n8n 的 Telegram Trigger 节点会捕获到用户的 Chat ID。</li>
+                    <li>对于群组，可以将 Bot 加入群组并发一条消息，然后通过 Telegram API (如 <code>getUpdates</code>) 或一些第三方 Bot (如 @userinfobot) 获取群组 ID (通常是负数)。</li>
+                    <li>对于频道，需要将 Bot 设置为管理员，然后使用频道用户名 (<code>@channelusername</code>) 或其 ID。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2><span class="material-icons-outlined" aria-hidden="true">calculate</span>数学公式示例 (MathJax)</h2>
+        <p>为了满足格式要求，这里展示一个 MathJax 渲染的数学公式（与 Telegram 主题无直接关联）：</p>
+        <div class="math-formula">$$ e^{i\pi} + 1 = 0 $$</div>
+
+        <p>通过组合 n8n 强大的工作流引擎和 Telegram Bot 灵活的消息功能，您可以创造出各种实用且富有创意的自动化解决方案。不断尝试和探索，发挥您的想象力吧！</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const graphOutput = document.getElementById('graph-output');
+        const zoomButton = document.getElementById('zoom-button');
+        const layoutToggleButton = document.getElementById('layout-toggle-button');
+        const downloadButton = document.getElementById('download-button');
+        const zoomModal = document.getElementById('zoom-modal');
+        const zoomContent = document.getElementById('zoom-content');
+        const closeZoomButton = document.getElementById('close-zoom');
+
+        let panzoomInstance = null;
+        let vizInstance = null;
+        let currentRankdir = 'LR'; // Default to Left-to-Right
+        const downloadButtonOriginalHTML = downloadButton?.innerHTML;
+        const baseDotString = `
+        digraph N8nTelegramWorkflow {
+            graph [labelloc=t, label="n8n Telegram 通知工作流示例", fontsize=18, fontname="Inter, sans-serif", bgcolor="transparent", pad="0.5", splines=ortho];
+            node [fontname="Inter, sans-serif", fontsize=11, style="filled,rounded", color="#666666", shape=box, margin="0.2,0.1"];
+            edge [fontsize=9, fontname="Inter, sans-serif", color="#888888"];
+
+            Trigger [label="触发器\\n(例: Webhook, 定时任务)", fillcolor="#E0E7FF", shape=cds];
+            ProcessData [label="数据处理\\n(例: Function节点)", fillcolor="#D1FAE5"];
+            FormatMessage [label="格式化消息\\n(例: Set节点)", fillcolor="#FEF3C7"];
+            TelegramSend [label="Telegram 发送节点", fillcolor="#FEE2E2", shape=component];
+
+            Trigger -> ProcessData [label="数据流"];
+            ProcessData -> FormatMessage [label="处理后数据"];
+            FormatMessage -> TelegramSend [label="格式化消息内容"];
+        }`;
+
+        try {
+            if (typeof Viz === 'undefined') {
+                throw new Error("Viz.js library not loaded.");
+            }
+            vizInstance = new Viz({ worker: undefined });
+        } catch (e) {
+            console.error("Failed to initialize Viz.js:", e);
+            if (graphOutput) {
+                graphOutput.innerHTML = '<p style="color:#dc3545;text-align:center;padding:20px;font-weight:500">Viz.js 初始化失败。</p>';
+            }
+            [zoomButton, layoutToggleButton, downloadButton].forEach(btn => {
+                if (btn) btn.disabled = true;
+            });
+        }
+
+        const panzoomWheelHandler = event => {
+            if (panzoomInstance && panzoomInstance.zoomWithWheel) {
+                event.preventDefault();
+                panzoomInstance.zoomWithWheel(event);
+            }
+        };
+
+        function updateLayoutButtonText() {
+            if (!layoutToggleButton) return;
+            const targetLayout = currentRankdir === 'TB' ? 'LR' : 'TB'; // TB: Top-to-Bottom, LR: Left-to-Right
+            layoutToggleButton.textContent = targetLayout;
+            layoutToggleButton.title = `切换到 ${targetLayout} 布局`;
+            layoutToggleButton.classList.remove('loading');
+        }
+
+        async function renderGraph(rankdir) {
+            if (!vizInstance) {
+                console.warn("Viz instance not available.");
+                if (graphOutput) graphOutput.innerHTML = '<p style="color:#ff8f00;text-align:center;padding:20px;font-weight:500">Viz.js 实例不可用。</p>';
+                return;
+            }
+            if (!graphOutput || !zoomContent) {
+                console.warn("Graph or zoom element not found.");
+                return;
+            }
+
+            const buttonsToDisable = [layoutToggleButton, zoomButton, downloadButton];
+            buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
+
+            if (layoutToggleButton) {
+                layoutToggleButton.innerHTML = '<span class="material-icons-outlined icon-spin" aria-hidden="true">sync</span>';
+                layoutToggleButton.classList.add('loading');
+            }
+            graphOutput.innerHTML = `<p style="padding:20px;text-align:center;color:#525860">正在生成 ${rankdir} 布局...</p>`;
+
+            let dotStringWithLayout = baseDotString;
+            if (dotStringWithLayout.includes("graph [")) {
+                 if (dotStringWithLayout.match(/rankdir\s*=\s*"\w+"/)) {
+                    dotStringWithLayout = dotStringWithLayout.replace(/rankdir\s*=\s*"\w+"/, `rankdir="${rankdir}"`);
+                } else {
+                    dotStringWithLayout = dotStringWithLayout.replace(/(\s*graph\s*\[)([^\]]*?)(\s*\])/, `$1rankdir="${rankdir}", $2$3`);
+                }
+            } else {
+                 dotStringWithLayout = dotStringWithLayout.replace(/(digraph\s+\w+\s*\{)/, `$1\n    graph [rankdir="${rankdir}"];`);
+            }
+            dotStringWithLayout = dotStringWithLayout.replace(/,\s*,/g, ',').replace(/,\s*\]/g, ']');
+
+
+            try {
+                const svgElement = await vizInstance.renderSVGElement(dotStringWithLayout);
+                graphOutput.innerHTML = "";
+                graphOutput.appendChild(svgElement);
+
+                const clonedSvg = svgElement.cloneNode(true);
+                zoomContent.innerHTML = "";
+                zoomContent.appendChild(clonedSvg);
+
+                const panzoomElement = zoomContent.querySelector('svg');
+                if (panzoomElement) {
+                    if (panzoomInstance && panzoomInstance.destroy) {
+                        const oldPanzoomParent = panzoomInstance.getPan()?.parentElement;
+                        if (oldPanzoomParent) oldPanzoomParent.removeEventListener('wheel', panzoomWheelHandler);
+                        panzoomInstance.destroy();
+                    }
+                    if (typeof Panzoom === 'undefined') console.error("Panzoom.js not loaded!");
+                    panzoomInstance = Panzoom(panzoomElement, { maxZoom: 15, minZoom: .05, contain: "outside", canvas: true, duration: 200, easing: "ease-out" });
+                    zoomContent.addEventListener('wheel', panzoomWheelHandler, { passive: false });
+                }
+                currentRankdir = rankdir;
+            } catch (error) {
+                console.error("Error rendering graph:", error);
+                graphOutput.innerHTML = `<p style="color:#dc3545;text-align:center;padding:20px;font-weight:500">图表渲染失败: ${error.message}</p>`;
+            } finally {
+                updateLayoutButtonText();
+                buttonsToDisable.forEach(btn => { if (btn) btn.disabled = false; });
+            }
+        }
+
+        async function downloadPNG() {
+            if (!graphOutput) return;
+            const svgElement = graphOutput.querySelector('svg');
+            if (!svgElement) return alert("没有图形可供下载。");
+            if (!downloadButton) return;
+
+            downloadButton.disabled = true;
+            downloadButton.innerHTML = '<span class="material-icons-outlined icon-spin" aria-hidden="true">hourglass_empty</span> <span>处理中...</span>';
+
+            try {
+                const svgXml = new XMLSerializer().serializeToString(svgElement);
+                const img = new Image();
+                const svgBlob = new Blob([svgXml], { type: "image/svg+xml;charset=utf-8" });
+                const url = URL.createObjectURL(svgBlob);
+
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let svgNaturalWidth = img.naturalWidth;
+                    let svgNaturalHeight = img.naturalHeight;
+                    const viewBox = svgElement.viewBox?.baseVal;
+
+                    if ((svgNaturalWidth === 0 || svgNaturalHeight === 0) && viewBox && viewBox.width > 0 && viewBox.height > 0) {
+                        svgNaturalWidth = viewBox.width;
+                        svgNaturalHeight = viewBox.height;
+                    } else if (svgNaturalWidth === 0 || svgNaturalHeight === 0) {
+                        const widthAttr = svgElement.getAttribute('width');
+                        const heightAttr = svgElement.getAttribute('height');
+                        if (widthAttr && heightAttr) {
+                            const ptToPx = 1.3333;
+                            svgNaturalWidth = parseFloat(widthAttr.replace("pt", "")) * (widthAttr.includes("pt") ? ptToPx : 1);
+                            svgNaturalHeight = parseFloat(heightAttr.replace("pt", "")) * (heightAttr.includes("pt") ? ptToPx : 1);
+                        }
+                    }
+                    if (isNaN(svgNaturalWidth) || svgNaturalWidth <= 0 || isNaN(svgNaturalHeight) || svgNaturalHeight <= 0) {
+                        console.warn("Could not get SVG dimensions. Defaulting to 800x600.");
+                        svgNaturalWidth = 800; svgNaturalHeight = 600;
+                    }
+
+                    const maxCanvasDim = 8000;
+                    const scaleFactor = Math.min(3.5, maxCanvasDim / Math.max(svgNaturalWidth, svgNaturalHeight));
+                    canvas.width = Math.round(svgNaturalWidth * scaleFactor);
+                    canvas.height = Math.round(svgNaturalHeight * scaleFactor);
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = getComputedStyle(graphOutput).backgroundColor || "#fff";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    const pngDataUrl = canvas.toDataURL("image/png");
+                    const link = document.createElement('a');
+                    link.href = pngDataUrl;
+                    link.download = `n8n_telegram_workflow_${currentRankdir.toLowerCase()}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    if (downloadButton) {
+                        downloadButton.disabled = false;
+                        downloadButton.innerHTML = downloadButtonOriginalHTML;
+                    }
+                };
+                img.onerror = (e) => {
+                    console.error("Error loading SVG for PNG conversion:", e);
+                    alert("无法加载图形转PNG");
+                    URL.revokeObjectURL(url);
+                    if (downloadButton) {
+                        downloadButton.disabled = false;
+                        downloadButton.innerHTML = downloadButtonOriginalHTML;
+                    }
+                };
+                img.src = url;
+            } catch (error) {
+                console.error("Error preparing PNG download:", error);
+                alert(`PNG下载错误: ${error.message}`);
+                if (downloadButton) {
+                    downloadButton.disabled = false;
+                    downloadButton.innerHTML = downloadButtonOriginalHTML;
+                }
+            }
+        }
+
+        if (graphOutput && layoutToggleButton && zoomButton && downloadButton && zoomModal && zoomContent && closeZoomButton) {
+            layoutToggleButton.addEventListener('click', () => renderGraph(currentRankdir === 'TB' ? 'LR' : 'TB'));
+            zoomButton.addEventListener('click', () => {
+                if (!panzoomInstance) return console.warn("Panzoom not available.");
+                zoomModal.style.display = "flex";
+                document.body.style.overflow = "hidden";
+                panzoomInstance.reset({ animate: true, duration: 300 });
+                setTimeout(() => panzoomInstance.zoom(.9, { animate: true, duration: 150 }), 50); // Slight zoom out initially
+                closeZoomButton.focus();
+            });
+            downloadButton.addEventListener('click', downloadPNG);
+            closeZoomButton.addEventListener('click', () => {
+                zoomModal.style.display = "none";
+                document.body.style.overflow = "";
+            });
+            zoomModal.addEventListener('click', event => {
+                if (event.target === zoomModal) { // Click on backdrop
+                    zoomModal.style.display = "none";
+                    document.body.style.overflow = "";
+                }
+            });
+            document.addEventListener('keydown', event => {
+                if (event.key === "Escape" && zoomModal.style.display === "flex") {
+                    zoomModal.style.display = "none";
+                    document.body.style.overflow = "";
+                }
+            });
+            if (vizInstance) {
+                updateLayoutButtonText();
+                renderGraph(currentRankdir);
+            }
+        } else {
+            console.warn("Graphviz elements missing. Functionality limited.");
+        }
+
+        if (typeof Prism !== 'undefined' && Prism.highlightAll) {
+            Prism.highlightAll();
+        } else if (typeof Prism === 'undefined') {
+            console.warn("Prism.js not loaded.");
+        }
+    });
+    </script>
+</body>
+</html>
