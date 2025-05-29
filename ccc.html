@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勇者冒險 - 文字RPG</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffd700;
+            margin-bottom: 30px;
+        }
+
+        .stats {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            margin: 5px;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #game-text {
+            background-color: #1a1a1a;
+            padding: 20px;
+            border-radius: 5px;
+            min-height: 200px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background-color: #5a5a5a;
+            transform: translateX(5px);
+        }
+
+        button:disabled {
+            background-color: #2a2a2a;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .hp { color: #ff6b6b; }
+        .mp { color: #4ecdc4; }
+        .gold { color: #ffd700; }
+        .exp { color: #95e1d3; }
+        .level { color: #f38181; }
+
+        .combat-log {
+            color: #ff9999;
+            font-style: italic;
+        }
+
+        .reward {
+            color: #90ee90;
+            font-weight: bold;
+        }
+
+        .inventory {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .item {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background-color: #4a4a4a;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>勇者冒險</h1>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">等級</div>
+                <div class="stat-value level" id="level">1</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">生命值</div>
+                <div class="stat-value hp" id="hp">100/100</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">魔力</div>
+                <div class="stat-value mp" id="mp">50/50</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">金幣</div>
+                <div class="stat-value gold" id="gold">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">經驗值</div>
+                <div class="stat-value exp" id="exp">0/100</div>
+            </div>
+        </div>
+
+        <div id="game-text"></div>
+        
+        <div class="choices" id="choices"></div>
+
+        <div class="inventory" id="inventory" style="display: none;">
+            <strong>背包：</strong>
+            <div id="items"></div>
+        </div>
+    </div>
+
+    <script>
+        // 遊戲狀態
+        const gameState = {
+            player: {
+                level: 1,
+                hp: 100,
+                maxHp: 100,
+                mp: 50,
+                maxMp: 50,
+                gold: 0,
+                exp: 0,
+                expToNext: 100,
+                attack: 10,
+                defense: 5,
+                inventory: []
+            },
+            currentScene: 'start',
+            flags: {}
+        };
+
+        // 怪物資料
+        const monsters = {
+            slime: {
+                name: '史萊姆',
+                hp: 30,
+                attack: 5,
+                defense: 2,
+                exp: 20,
+                gold: 10
+            },
+            goblin: {
+                name: '哥布林',
+                hp: 50,
+                attack: 8,
+                defense: 4,
+                exp: 35,
+                gold: 20
+            },
+            wolf: {
+                name: '野狼',
+                hp: 70,
+                attack: 12,
+                defense: 6,
+                exp: 50,
+                gold: 30
+            },
+            dragon: {
+                name: '黑暗巨龍',
+                hp: 200,
+                attack: 25,
+                defense: 15,
+                exp: 200,
+                gold: 500
+            }
+        };
+
+        // 場景資料
+        const scenes = {
+            start: {
+                text: '你是一名年輕的冒險者，站在村莊的入口。\n\n村長告訴你，最近有邪惡的黑暗巨龍威脅著這片土地。\n你決定踏上冒險之旅，成為拯救村莊的英雄。\n\n你要去哪裡？',
+                choices: [
+                    { text: '前往森林探險', nextScene: 'forest' },
+                    { text: '去村莊商店', nextScene: 'shop' },
+                    { text: '在村莊休息（恢復HP/MP）', nextScene: 'rest' }
+                ]
+            },
+            forest: {
+                text: '你進入了幽暗的森林。\n樹木遮蔽了陽光，四周傳來奇怪的聲音...\n\n突然，一個怪物出現在你面前！',
+                choices: [
+                    { text: '戰鬥！', nextScene: 'combat_forest' },
+                    { text: '逃跑回村莊', nextScene: 'start' }
+                ]
+            },
+            shop: {
+                text: '歡迎來到村莊商店！\n\n商店老闆：「勇者大人，需要什麼嗎？」',
+                choices: [
+                    { text: '購買生命藥水（50金幣）', action: 'buyPotion' },
+                    { text: '購買力量藥劑（100金幣）', action: 'buyStrength' },
+                    { text: '離開商店', nextScene: 'start' }
+                ]
+            },
+            rest: {
+                text: '你在村莊的旅館休息了一晚...\n\n生命值和魔力完全恢復了！',
+                action: 'rest',
+                choices: [
+                    { text: '繼續冒險', nextScene: 'start' }
+                ]
+            },
+            cave: {
+                text: '你發現了一個神秘的洞穴。\n洞穴深處傳來低沉的吼聲...\n\n這裡可能是黑暗巨龍的巢穴！',
+                choices: [
+                    { text: '勇敢地進入洞穴', nextScene: 'dragon_lair' },
+                    { text: '先回去準備一下', nextScene: 'start' }
+                ]
+            },
+            dragon_lair: {
+                text: '你進入了巨龍的巢穴。\n一隻巨大的黑暗巨龍出現在你面前！\n\n「愚蠢的人類，你竟敢闖入我的領地！」',
+                choices: [
+                    { text: '決戰黑暗巨龍！', nextScene: 'combat_dragon' },
+                    { text: '現在逃跑還來得及...', nextScene: 'start' }
+                ]
+            },
+            victory: {
+                text: '恭喜你擊敗了黑暗巨龍！\n\n你成為了傳說中的英雄，村民們永遠記住了你的名字。\n\n感謝你的冒險！',
+                choices: [
+                    { text: '重新開始', action: 'restart' }
+                ]
+            }
+        };
+
+        // 更新UI
+        function updateUI() {
+            const p = gameState.player;
+            document.getElementById('level').textContent = p.level;
+            document.getElementById('hp').textContent = `${p.hp}/${p.maxHp}`;
+            document.getElementById('mp').textContent = `${p.mp}/${p.maxMp}`;
+            document.getElementById('gold').textContent = p.gold;
+            document.getElementById('exp').textContent = `${p.exp}/${p.expToNext}`;
+            
+            // 更新背包
+            const itemsDiv = document.getElementById('items');
+            if (p.inventory.length > 0) {
+                document.getElementById('inventory').style.display = 'block';
+                itemsDiv.innerHTML = p.inventory.map(item => 
+                    `<span class="item">${item}</span>`
+                ).join('');
+            } else {
+                document.getElementById('inventory').style.display = 'none';
+            }
+        }
+
+        // 顯示場景
+        function showScene(sceneName) {
+            const scene = scenes[sceneName];
+            if (!scene) return;
+            
+            document.getElementById('game-text').innerHTML = scene.text;
+            
+            const choicesDiv = document.getElementById('choices');
+            choicesDiv.innerHTML = '';
+            
+            // 執行場景動作
+            if (scene.action) {
+                executeAction(scene.action);
+            }
+            
+            // 顯示選項
+            scene.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.textContent = choice.text;
+                button.onclick = () => {
+                    if (choice.action) {
+                        executeAction(choice.action);
+                    } else if (choice.nextScene) {
+                        if (choice.nextScene.startsWith('combat_')) {
+                            startCombat(choice.nextScene);
+                        } else {
+                            gameState.currentScene = choice.nextScene;
+                            showScene(choice.nextScene);
+                        }
+                    }
+                };
+                choicesDiv.appendChild(button);
+            });
+            
+            updateUI();
+        }
+
+        // 執行動作
+        function executeAction(action) {
+            const p = gameState.player;
+            
+            switch(action) {
+                case 'rest':
+                    p.hp = p.maxHp;
+                    p.mp = p.maxMp;
+                    break;
+                    
+                case 'buyPotion':
+                    if (p.gold >= 50) {
+                        p.gold -= 50;
+                        p.inventory.push('生命藥水');
+                        appendText('\n\n<span class="reward">獲得了生命藥水！</span>');
+                    } else {
+                        appendText('\n\n金幣不足！');
+                    }
+                    break;
+                    
+                case 'buyStrength':
+                    if (p.gold >= 100) {
+                        p.gold -= 100;
+                        p.attack += 5;
+                        appendText('\n\n<span class="reward">攻擊力提升了5點！</span>');
+                    } else {
+                        appendText('\n\n金幣不足！');
+                    }
+                    break;
+                    
+                case 'restart':
+                    location.reload();
+                    break;
+            }
+            
+            updateUI();
+        }
+
+        // 戰鬥系統
+        function startCombat(combatType) {
+            let monster;
+            
+            if (combatType === 'combat_forest') {
+                const forestMonsters = ['slime', 'goblin', 'wolf'];
+                const randomMonster = forestMonsters[Math.floor(Math.random() * forestMonsters.length)];
+                monster = { ...monsters[randomMonster] };
+            } else if (combatType === 'combat_dragon') {
+                monster = { ...monsters.dragon };
+            }
+            
+            if (!monster) return;
+            
+            let combatText = `遭遇了 ${monster.name}！\n`;
+            combatText += `${monster.name} HP: ${monster.hp}\n\n`;
+            
+            // 戰鬥回合
+            function combatRound() {
+                const p = gameState.player;
+                
+                // 玩家攻擊
+                const playerDamage = Math.max(1, p.attack - monster.defense + Math.floor(Math.random() * 5));
+                monster.hp -= playerDamage;
+                combatText += `你造成了 ${playerDamage} 點傷害！\n`;
+                
+                if (monster.hp <= 0) {
+                    // 勝利
+                    combatText += `\n<span class="reward">戰鬥勝利！</span>\n`;
+                    combatText += `獲得 ${monster.exp} 經驗值和 ${monster.gold} 金幣！`;
+                    
+                    p.exp += monster.exp;
+                    p.gold += monster.gold;
+                    
+                    // 檢查升級
+                    if (p.exp >= p.expToNext) {
+                        levelUp();
+                    }
+                    
+                    document.getElementById('game-text').innerHTML = combatText;
+                    
+                    const choicesDiv = document.getElementById('choices');
+                    choicesDiv.innerHTML = '';
+                    
+                    if (combatType === 'combat_dragon') {
+                        const button = document.createElement('button');
+                        button.textContent = '繼續';
+                        button.onclick = () => {
+                            gameState.currentScene = 'victory';
+                            showScene('victory');
+                        };
+                        choicesDiv.appendChild(button);
+                    } else {
+                        // 森林戰鬥後的選項
+                        const continueButton = document.createElement('button');
+                        continueButton.textContent = '繼續探索';
+                        continueButton.onclick = () => {
+                            if (p.level >= 3 && !gameState.flags.caveDis) {
+                                gameState.flags.caveDiscovered = true;
+                                appendText('\n\n你在森林深處發現了一個神秘的洞穴！');
+                                setTimeout(() => {
+                                    gameState.currentScene = 'cave';
+                                    showScene('cave');
+                                }, 2000);
+                            } else {
+                                gameState.currentScene = 'forest';
+                                showScene('forest');
+                            }
+                        };
+                        choicesDiv.appendChild(continueButton);
+                        
+                        const returnButton = document.createElement('button');
+                        returnButton.textContent = '返回村莊';
+                        returnButton.onclick = () => {
+                            gameState.currentScene = 'start';
+                            showScene('start');
+                        };
+                        choicesDiv.appendChild(returnButton);
+                    }
+                    
+                    updateUI();
+                    return;
+                }
+                
+                // 怪物攻擊
+                const monsterDamage = Math.max(1, monster.attack - p.defense + Math.floor(Math.random() * 3));
+                p.hp -= monsterDamage;
+                combatText += `${monster.name} 造成了 ${monsterDamage} 點傷害！\n`;
+                combatText += `\n你的HP: ${p.hp}/${p.maxHp}\n`;
+                combatText += `${monster.name} HP: ${monster.hp}\n\n`;
+                
+                if (p.hp <= 0) {
+                    // 失敗
+                    combatText += '\n<span class="combat-log">你被擊敗了...</span>';
+                    document.getElementById('game-text').innerHTML = combatText;
+                    
+                    const choicesDiv = document.getElementById('choices');
+                    choicesDiv.innerHTML = '';
+                    const button = document.createElement('button');
+                    button.textContent = '重新開始';
+                    button.onclick = () => location.reload();
+                    choicesDiv.appendChild(button);
+                    
+                    updateUI();
+                    return;
+                }
+                
+                // 顯示戰鬥選項
+                document.getElementById('game-text').innerHTML = combatText;
+                const choicesDiv = document.getElementById('choices');
+                choicesDiv.innerHTML = '';
+                
+                const attackButton = document.createElement('button');
+                attackButton.textContent = '繼續攻擊';
+                attackButton.onclick = combatRound;
+                choicesDiv.appendChild(attackButton);
+                
+                // 使用道具
+                if (p.inventory.includes('生命藥水')) {
+                    const potionButton = document.createElement('button');
+                    potionButton.textContent = '使用生命藥水';
+                    potionButton.onclick = () => {
+                        const index = p.inventory.indexOf('生命藥水');
+                        p.inventory.splice(index, 1);
+                        p.hp = Math.min(p.maxHp, p.hp + 50);
+                        combatText += '你使用了生命藥水，恢復了50點HP！\n';
+                        combatRound();
+                    };
+                    choicesDiv.appendChild(potionButton);
+                }
+                
+                updateUI();
+            }
+            
+            combatRound();
+        }
+
+        // 升級
+        function levelUp() {
+            const p = gameState.player;
+            p.level++;
+            p.exp -= p.expToNext;
+            p.expToNext = p.level * 100;
+            p.maxHp += 20;
+            p.hp = p.maxHp;
+            p.maxMp += 10;
+            p.mp = p.maxMp;
+            p.attack += 3;
+            p.defense += 2;
+            
+            appendText(`\n\n<span class="reward">升級了！現在是等級 ${p.level}！</span>`);
+        }
+
+        // 附加文字
+        function appendText(text) {
+            document.getElementById('game-text').innerHTML += text;
+        }
+
+        // 開始遊戲
+        showScene('start');
+    </script>
+</body>
+</html>
