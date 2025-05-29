@@ -628,4 +628,92 @@
                 gameState.player.gold += goldGain;
                 addLogEntry(`[系统] 你击败了${gameState.enemy.name}，获得了${goldGain}金币！`);
                 
-                // 生成
+                // 生成新敌人
+                setTimeout(() => {
+                    const enemies = [
+                        {name: "巨型蜘蛛", hp: 75, attack: 14, defense: 6, emoji: "🕷️"},
+                        {name: "骷髅战士", hp: 90, attack: 16, defense: 8, emoji: "💀"},
+                        {name: "石像鬼", hp: 110, attack: 18, defense: 12, emoji: "🗿"},
+                        {name: "火焰元素", hp: 65, attack: 22, defense: 5, emoji: "🔥"}
+                    ];
+                    
+                    gameState.enemy = enemies[Math.floor(Math.random() * enemies.length)];
+                    addLogEntry(`[系统] 一只${gameState.enemy.name}出现在你面前！`);
+                    updateUI();
+                }, 1500);
+            } else {
+                const damage = Math.max(1, gameState.enemy.attack - Math.floor(gameState.player.defense/2));
+                gameState.player.hp -= damage;
+                addLogEntry(`[敌人] ${gameState.enemy.name}对你造成了${damage}点伤害！`);
+                
+                if (gameState.player.hp <= 0) {
+                    gameState.player.hp = 0;
+                    addLogEntry(`[系统] 你被${gameState.enemy.name}击败了！`);
+                    setTimeout(() => {
+                        document.getElementById('victory-message').style.display = 'block';
+                    }, 2000);
+                }
+            }
+            
+            updateUI();
+        }
+        
+        function rest() {
+            const hpRecovered = Math.min(30, gameState.player.maxHp - gameState.player.hp);
+            gameState.player.hp += hpRecovered;
+            addLogEntry(`[你] 休息了一会儿，恢复了${hpRecovered}点生命值。`);
+            updateUI();
+        }
+        
+        // 初始化事件监听器
+        document.querySelectorAll('.action-btn').forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                switch(index) {
+                    case 0: explore(); break;
+                    case 1: visitShop(); break;
+                    case 2: startBattle(); break;
+                    case 3: rest(); break;
+                    default: 
+                        addLogEntry(`[系统] 此功能尚未实现。`);
+                }
+            });
+        });
+        
+        // 地图点击事件
+        document.querySelectorAll('.map-cell').forEach((cell, index) => {
+            cell.addEventListener('click', () => {
+                if (index !== gameState.currentLocationIndex) {
+                    gameState.currentLocationIndex = index;
+                    gameState.player.location = gameState.locations[index];
+                    addLogEntry(`[你] 旅行到了${gameState.player.location}`);
+                    updateUI();
+                }
+            });
+        });
+        
+        // 胜利消息重启按钮
+        document.querySelector('.restart-btn').addEventListener('click', () => {
+            document.getElementById('victory-message').style.display = 'none';
+            gameState.player.hp = gameState.player.maxHp;
+            gameState.enemy.hp = gameState.enemy.maxHp;
+            gameState.logEntries = [
+                "[系统] 新的冒险开始了！",
+                `[你] 到达了${gameState.player.location}`
+            ];
+            updateUI();
+        });
+        
+        // 初始化游戏
+        updateUI();
+        
+        // 添加一些初始日志
+        setTimeout(() => {
+            addLogEntry("[系统] 提示：点击地图上的不同位置可以快速旅行。");
+        }, 3000);
+        
+        setTimeout(() => {
+            addLogEntry("[系统] 提示：使用'休息'按钮可以恢复生命值。");
+        }, 7000);
+    </script>
+</body>
+</html>
