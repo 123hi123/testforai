@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勇者之旅 - 文字冒险RPG</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        
+        body {
+            background: #0a0a1a;
+            color: #e0e0ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(40, 40, 90, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(60, 30, 70, 0.1) 0%, transparent 20%);
+        }
+        
+        .game-container {
+            width: 100%;
+            max-width: 900px;
+            background: #151530;
+            border: 2px solid #4a4a8a;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(80, 60, 180, 0.5);
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            grid-template-rows: 70px 1fr 200px;
+            grid-template-areas:
+                "header header"
+                "main sidebar"
+                "actions sidebar";
+            height: 90vh;
+        }
+        
+        .game-header {
+            grid-area: header;
+            background: linear-gradient(to right, #2a2050, #1a1435);
+            padding: 15px;
+            border-bottom: 2px solid #4a4a8a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .game-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px #7a5af5;
+            color: #b8b8f8;
+            letter-spacing: 2px;
+        }
+        
+        .player-stats {
+            display: flex;
+            gap: 25px;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .stat i {
+            color: #7a5af5;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #f8f8ff;
+        }
+        
+        .main-content {
+            grid-area: main;
+            padding: 20px;
+            overflow-y: auto;
+            background: #101025;
+            border-right: 1px solid #2a2a5a;
+        }
+        
+        .location-title {
+            color: #7a5af5;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #3a3a7a;
+        }
+        
+        .location-description {
+            line-height: 1.7;
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+        
+        .game-log {
+            background: rgba(10, 10, 30, 0.7);
+            border: 1px solid #3a3a7a;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #3a3a7a;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .log-player {
+            color: #5af5a0;
+        }
+        
+        .log-enemy {
+            color: #f55a7a;
+        }
+        
+        .log-event {
+            color: #5aa0f5;
+        }
+        
+        .sidebar {
+            grid-area: sidebar;
+            background: #101025;
+            padding: 20px;
+            border-left: 1px solid #2a2a5a;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .panel {
+            background: rgba(10, 10, 30, 0.6);
+            border: 1px solid #3a3a7a;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .panel-title {
+            color: #7a5af5;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .world-map {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .map-cell {
+            background: #1a1a3a;
+            border: 1px solid #3a3a7a;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 0.85rem;
+            padding: 5px;
+        }
+        
+        .map-cell:hover {
+            background: #2a2a5a;
+            transform: translateY(-3px);
+        }
+        
+        .map-cell.current {
+            background: #3a2a7a;
+            border-color: #7a5af5;
+            box-shadow: 0 0 10px rgba(122, 90, 245, 0.7);
+        }
+        
+        .inventory-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .item {
+            background: #2a2a5a;
+            border: 1px solid #4a4a8a;
+            padding: 8px 12px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .item i {
+            color: #7a5af5;
+        }
+        
+        .action-buttons {
+            grid-area: actions;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            background: #101025;
+            border-top: 1px solid #2a2a5a;
+        }
+        
+        .action-btn {
+            background: linear-gradient(to bottom, #3a2a7a, #2a1a5a);
+            border: 1px solid #5a4a9a;
+            color: #e0e0ff;
+            border-radius: 8px;
+            padding: 15px 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .action-btn:hover {
+            background: linear-gradient(to bottom, #4a3a8a, #3a2a7a);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(90, 70, 180, 0.4);
+        }
+        
+        .action-btn i {
+            font-size: 1.8rem;
+            color: #7a5af5;
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .enemy-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .enemy-image {
+            width: 100px;
+            height: 100px;
+            background: #2a2a5a;
+            border-radius: 50%;
+            border: 3px solid #5a4a9a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+        }
+        
+        .enemy-health {
+            width: 100%;
+            height: 20px;
+            background: #2a2a5a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #3a3a7a;
+        }
+        
+        .health-bar {
+            height: 100%;
+            background: linear-gradient(to right, #f55a7a, #ff2a5a);
+            width: 80%;
+            transition: width 0.5s;
+        }
+        
+        .combat-actions {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .combat-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #5a4a9a;
+            background: #3a2a7a;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .combat-btn:hover {
+            background: #4a3a8a;
+        }
+        
+        .game-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 5, 30, 0.95);
+            border: 3px solid #7a5af5;
+            border-radius: 10px;
+            padding: 30px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+        
+        .message-title {
+            font-size: 2rem;
+            color: #7a5af5;
+            margin-bottom: 20px;
+        }
+        
+        .message-content {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(to bottom, #7a5af5, #5a3ad5);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(122, 90, 245, 0.7);
+        }
+        
+        @media (max-width: 768px) {
+            .game-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto auto;
+                grid-template-areas:
+                    "header"
+                    "main"
+                    "actions"
+                    "sidebar";
+                height: auto;
+            }
+            
+            .action-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="game-title">勇者之旅</div>
+            <div class="player-stats">
+                <div class="stat">
+                    <i class="fas fa-heart"></i>
+                    <span>生命: <span class="stat-value" id="hp">100</span>/100</span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-fist-raised"></i>
+                    <span>攻击: <span class="stat-value" id="attack">15</span></span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-coins"></i>
+                    <span>金币: <span class="stat-value" id="gold">50</span></span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>防御: <span class="stat-value" id="defense">8</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="location-title">起始村庄</div>
+            <div class="location-description">
+                你站在一个宁静的小村庄广场上。东边是通往幽暗森林的道路，西边是武器店，北边是村庄旅馆，南边是训练场。村民们忙碌地走来走去，几个孩子在喷泉边玩耍。空气中飘着新鲜面包的香气。
+            </div>
+            
+            <div class="game-log">
+                <div class="log-entry"><span class="log-event">[系统]</span> 欢迎来到勇者之旅！你是一名初出茅庐的冒险者，目标是成为传说中的英雄。</div>
+                <div class="log-entry"><span class="log-event">[系统]</span> 使用下方的按钮进行行动，或点击地图快速移动。</div>
+                <div class="log-entry"><span class="log-player">[你]</span> 到达了起始村庄</div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="panel">
+                <div class="panel-title"><i class="fas fa-map"></i> 世界地图</div>
+                <div class="world-map">
+                    <div class="map-cell">北部山脉</div>
+                    <div class="map-cell">幽灵城堡</div>
+                    <div class="map-cell">龙之巢穴</div>
+                    <div class="map-cell">神秘湖泊</div>
+                    <div class="map-cell current">起始村庄</div>
+                    <div class="map-cell">黑暗沼泽</div>
+                    <div class="map-cell">古代遗迹</div>
+                    <div class="map-cell">幽暗森林</div>
+                    <div class="map-cell">南部沙漠</div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title"><i class="fas fa-dragon"></i> 敌人</div>
+                <div class="enemy-display">
+                    <div class="enemy-image">🐺</div>
+                    <div class="enemy-name">森林狼</div>
+                    <div class="enemy-health">
+                        <div class="health-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="combat-actions">
+                        <button class="combat-btn">攻击</button>
+                        <button class="combat-btn">防御</button>
+                        <button class="combat-btn">技能</button>
+                        <button class="combat-btn">逃跑</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title"><i class="fas fa-backpack"></i> 物品栏</div>
+                <div class="inventory-items">
+                    <div class="item"><i class="fas fa-utensils"></i> 面包 x5</div>
+                    <div class="item"><i class="fas fa-wine-bottle"></i> 治疗药水 x3</div>
+                    <div class="item"><i class="fas fa-gem"></i> 魔法宝石</div>
+                    <div class="item"><i class="fas fa-key"></i> 青铜钥匙</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-btn">
+                <i class="fas fa-walking"></i>
+                <span>探索</span>
+            </button>
+            <button class="action-btn">
+                <i class="fas fa-store"></i>
+                <span>商店</span>
+            </button>
+            <button class="action-btn">
+                <i class="fas fa-swords"></i>
+                <span>战斗</span>
+            </button>
+            <button class="action-btn">
+                <i class="fas fa-campground"></i>
+                <span>休息</span>
+            </button>
+            <button class="action-btn">
+                <i class="fas fa-dungeon"></i>
+                <span>地牢</span>
+            </button>
+            <button class="action-btn">
+                <i class="fas fa-book"></i>
+                <span>任务</span>
+            </button>
+            <button class="action-btn">
+                <i class="fas fa-scroll"></i>
+                <span>技能</span>
+            </button>
+            <button class="action-btn">
+                <i class="fas fa-cog"></i>
+                <span>设置</span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="game-message" id="victory-message">
+        <div class="message-title">胜利！</div>
+        <div class="message-content">
+            你击败了强大的黑龙，拯救了王国！村民们欢呼你的名字，国王赐予你英雄的称号。你的传奇故事将被世代传颂！
+        </div>
+        <button class="restart-btn">新的冒险</button>
+    </div>
+
+    <script>
+        // 游戏状态
+        const gameState = {
+            player: {
+                hp: 100,
+                maxHp: 100,
+                attack: 15,
+                defense: 8,
+                gold: 50,
+                location: "起始村庄",
+                level: 1,
+                exp: 0,
+                nextLevelExp: 100
+            },
+            locations: [
+                "起始村庄", "幽暗森林", "北部山脉", "幽灵城堡", 
+                "神秘湖泊", "黑暗沼泽", "古代遗迹", "龙之巢穴", "南部沙漠"
+            ],
+            currentLocationIndex: 4,
+            logEntries: [
+                "[系统] 欢迎来到勇者之旅！你是一名初出茅庐的冒险者，目标是成为传说中的英雄。",
+                "[系统] 使用下方的按钮进行行动，或点击地图快速移动。",
+                "[你] 到达了起始村庄"
+            ],
+            enemy: {
+                name: "森林狼",
+                hp: 60,
+                maxHp: 60,
+                attack: 12,
+                defense: 5,
+                emoji: "🐺"
+            }
+        };
+        
+        // 更新游戏UI
+        function updateUI() {
+            // 更新玩家状态
+            document.getElementById('hp').textContent = gameState.player.hp;
+            document.getElementById('attack').textContent = gameState.player.attack;
+            document.getElementById('gold').textContent = gameState.player.gold;
+            document.getElementById('defense').textContent = gameState.player.defense;
+            
+            // 更新位置标题
+            document.querySelector('.location-title').textContent = gameState.player.location;
+            
+            // 更新游戏日志
+            const logContainer = document.querySelector('.game-log');
+            logContainer.innerHTML = '';
+            gameState.logEntries.slice(-10).forEach(entry => {
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                
+                if (entry.includes('[系统]')) {
+                    div.innerHTML = `<span class="log-event">[系统]</span> ${entry.replace('[系统] ', '')}`;
+                } else if (entry.includes('[你]')) {
+                    div.innerHTML = `<span class="log-player">[你]</span> ${entry.replace('[你] ', '')}`;
+                } else if (entry.includes('[敌人]')) {
+                    div.innerHTML = `<span class="log-enemy">[敌人]</span> ${entry.replace('[敌人] ', '')}`;
+                } else {
+                    div.textContent = entry;
+                }
+                
+                logContainer.appendChild(div);
+            });
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // 更新地图当前位置
+            document.querySelectorAll('.map-cell').forEach((cell, index) => {
+                cell.classList.remove('current');
+                if (index === gameState.currentLocationIndex) {
+                    cell.classList.add('current');
+                }
+            });
+            
+            // 更新敌人状态
+            const enemy = document.querySelector('.enemy-name');
+            const enemyImg = document.querySelector('.enemy-image');
+            const healthBar = document.querySelector('.health-bar');
+            
+            enemy.textContent = gameState.enemy.name;
+            enemyImg.textContent = gameState.enemy.emoji;
+            healthBar.style.width = `${(gameState.enemy.hp / gameState.enemy.maxHp) * 100}%`;
+        }
+        
+        // 添加日志条目
+        function addLogEntry(entry) {
+            gameState.logEntries.push(entry);
+            if (gameState.logEntries.length > 50) {
+                gameState.logEntries.shift();
+            }
+            updateUI();
+        }
+        
+        // 游戏动作处理函数
+        function explore() {
+            const outcomes = [
+                "你在村庄周围闲逛，发现了一些有用的草药。",
+                "你帮助一位老妇人找到了她丢失的猫，获得了10金币作为报酬。",
+                "你发现了一条秘密小路，但决定改天再探索。",
+                "你在训练场练习剑术，感觉自己的攻击力有所提升。",
+                "你与一位旅行商人交谈，得到了一些关于附近地牢的情报。"
+            ];
+            
+            const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+            addLogEntry(`[你] 探索了${gameState.player.location}：${outcome}`);
+        }
+        
+        function visitShop() {
+            addLogEntry(`[你] 访问了商店：武器商人向你展示了新到的宝剑。`);
+        }
+        
+        function startBattle() {
+            addLogEntry(`[系统] 你遭遇了${gameState.enemy.name}！`);
+            addLogEntry(`[你] 对${gameState.enemy.name}造成了${gameState.player.attack}点伤害！`);
+            
+            // 模拟战斗
+            gameState.enemy.hp -= gameState.player.attack;
+            
+            if (gameState.enemy.hp <= 0) {
+                gameState.enemy.hp = 0;
+                const goldGain = Math.floor(Math.random() * 20) + 10;
+                gameState.player.gold += goldGain;
+                addLogEntry(`[系统] 你击败了${gameState.enemy.name}，获得了${goldGain}金币！`);
+                
+                // 生成
