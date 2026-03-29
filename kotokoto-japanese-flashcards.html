@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ことこと卡｜日語單字卡練習 App</title>
+  <style>
+    :root {
+      --bg: #f7f1e7;
+      --bg-soft: #fff9f0;
+      --panel: rgba(255, 249, 240, 0.88);
+      --line: rgba(107, 86, 61, 0.16);
+      --text: #3b3024;
+      --muted: #7e6a54;
+      --accent: #7ca982;
+      --accent-strong: #5d8863;
+      --accent-soft: #e4f0e2;
+      --highlight: #e3c59b;
+      --warning: #c77a57;
+      --shadow: 0 18px 40px rgba(95, 73, 48, 0.12);
+      --radius-lg: 26px;
+      --radius-md: 18px;
+      --radius-sm: 999px;
+      --transition: 180ms ease;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(227, 197, 155, 0.42), transparent 26%),
+        radial-gradient(circle at top right, rgba(124, 169, 130, 0.28), transparent 24%),
+        linear-gradient(180deg, #fdf7ef 0%, #f7f1e7 100%);
+      min-height: 100vh;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+
+    .hero,
+    .panel,
+    .mini-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      border-radius: 30px;
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -55px auto;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(124, 169, 130, 0.18), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: 0.04em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 720px;
+      line-height: 1.7;
+    }
+
+    .badge-row,
+    .segmented {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(107, 86, 61, 0.12);
+      color: var(--muted);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .control-block {
+      display: grid;
+      gap: 10px;
+    }
+
+    .control-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .segmented {
+      gap: 8px;
+    }
+
+    .segmented button {
+      border: 1px solid rgba(107, 86, 61, 0.12);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--muted);
+      padding: 11px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: transform var(--transition), background var(--transition), color var(--transition), border-color var(--transition);
+    }
+
+    .segmented button:hover,
+    .secondary-actions button:hover,
+    .primary-actions button:hover,
+    .review-actions button:hover,
+    .shadow-actions button:hover,
+    .card-speech button:hover {
+      transform: translateY(-1px);
+    }
+
+    .segmented button.active,
+    .primary-actions button,
+    .review-actions button.primary,
+    .shadow-actions button.primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .speed-control {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .speed-control select {
+      border: 1px solid rgba(107, 86, 61, 0.16);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--text);
+      padding: 11px 14px;
+      border-radius: 14px;
+      min-width: 120px;
+    }
+
+    .stage {
+      display: grid;
+      gap: 18px;
+    }
+
+    .card-shell {
+      perspective: 1400px;
+      min-height: 440px;
+    }
+
+    .study-card {
+      position: relative;
+      width: 100%;
+      min-height: 440px;
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      perspective: inherit;
+    }
+
+    .study-card:focus-visible {
+      outline: 3px solid rgba(124, 169, 130, 0.5);
+      outline-offset: 3px;
+    }
+
+    .card-inner {
+      position: relative;
+      width: 100%;
+      min-height: 440px;
+      transform-style: preserve-3d;
+      transition: transform 560ms cubic-bezier(.2, .7, .18, 1);
+    }
+
+    .study-card.is-flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 28px;
+      padding: 28px;
+      backface-visibility: hidden;
+      display: grid;
+      gap: 18px;
+      border: 1px solid rgba(107, 86, 61, 0.12);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-face::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 240, 0.84)),
+        repeating-linear-gradient(
+          180deg,
+          rgba(124, 169, 130, 0.05) 0,
+          rgba(124, 169, 130, 0.05) 1px,
+          transparent 1px,
+          transparent 46px
+        );
+      pointer-events: none;
+    }
+
+    .card-face.back {
+      transform: rotateY(180deg);
+      background: linear-gradient(160deg, rgba(255, 248, 239, 0.95), rgba(243, 251, 244, 0.95));
+    }
+
+    .card-face.front {
+      background: linear-gradient(165deg, rgba(255, 249, 240, 0.98), rgba(248, 255, 248, 0.94));
+    }
+
+    .card-meta,
+    .card-body,
+    .example-box,
+    .card-speech {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      color: var(--muted);
+    }
+
+    .card-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(124, 169, 130, 0.12);
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .card-body {
+      display: grid;
+      align-content: center;
+      justify-items: start;
+      gap: 14px;
+      min-height: 230px;
+    }
+
+    .card-word {
+      font-size: clamp(2.3rem, 6vw, 4.6rem);
+      font-weight: 800;
+      line-height: 1.08;
+      margin: 0;
+      letter-spacing: 0.04em;
+    }
+
+    .card-reading {
+      font-size: 1.18rem;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .card-romaji {
+      font-size: 1rem;
+      margin: 0;
+      color: var(--accent-strong);
+      background: rgba(124, 169, 130, 0.12);
+      padding: 7px 12px;
+      border-radius: 12px;
+    }
+
+    .card-meaning {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .card-hint {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .example-box {
+      display: grid;
+      gap: 10px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(107, 86, 61, 0.1);
+      padding: 18px;
+    }
+
+    .example-box strong {
+      font-size: 0.92rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .example-ja,
+    .example-zh {
+      margin: 0;
+      line-height: 1.7;
+    }
+
+    .card-speech {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .card-speech button,
+    .secondary-actions button,
+    .primary-actions button,
+    .review-actions button,
+    .shadow-actions button {
+      border: 1px solid rgba(107, 86, 61, 0.12);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 15px;
+      cursor: pointer;
+      transition: transform var(--transition), background var(--transition), border-color var(--transition), color var(--transition);
+    }
+
+    .card-speech button {
+      color: var(--accent-strong);
+    }
+
+    .actions-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .secondary-actions,
+    .primary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .status-text {
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    .mini-panel {
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(107, 86, 61, 0.12);
+      border-radius: 18px;
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 1.55rem;
+      font-weight: 800;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .side-stack h2,
+    .mini-panel h3 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+
+    .side-stack p,
+    .mini-panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .review-actions,
+    .shadow-actions,
+    .shadow-score-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .review-actions button[data-result="again"] {
+      border-color: rgba(199, 122, 87, 0.32);
+      color: var(--warning);
+    }
+
+    .review-actions button[data-result="easy"] {
+      border-color: rgba(124, 169, 130, 0.28);
+      color: var(--accent-strong);
+    }
+
+    .review-actions button.primary[data-result="again"],
+    .shadow-score-actions button.primary[data-score="retry"] {
+      background: linear-gradient(135deg, #d39271 0%, #c77a57 100%);
+    }
+
+    .shadow-score-actions button {
+      border: 1px solid rgba(107, 86, 61, 0.12);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 14px;
+      cursor: pointer;
+    }
+
+    .record-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(199, 122, 87, 0.12);
+      color: var(--warning);
+      width: fit-content;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 900ms infinite;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .empty-state {
+      padding: 20px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px dashed rgba(107, 86, 61, 0.22);
+    }
+
+    .tips-list {
+      display: grid;
+      gap: 10px;
+      padding-left: 18px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        transform: scale(0.85);
+        opacity: 0.55;
+      }
+      50% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        padding: 18px 14px 28px;
+      }
+
+      .hero,
+      .panel {
+        padding: 18px;
+      }
+
+      .card-face {
+        padding: 22px 18px;
+      }
+
+      .card-shell,
+      .study-card,
+      .card-inner {
+        min-height: 400px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .secondary-actions,
+      .primary-actions {
+        width: 100%;
+      }
+
+      .secondary-actions button,
+      .primary-actions button,
+      .review-actions button,
+      .shadow-actions button,
+      .shadow-score-actions button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>ことこと卡</h1>
+          <p>
+            純 HTML、CSS、JS 製作的日語單字卡 App。
+            你可以翻卡、聽發音、切分類、做智慧複習，也能用跟讀錄音練口說。
+          </p>
+        </div>
+        <div class="badge-row">
+          <span class="badge">基礎功能完整</span>
+          <span class="badge">智慧複習模式</span>
+          <span class="badge">跟讀錄音鏡像</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="panel">
+        <div class="controls">
+          <div class="control-block">
+            <span class="control-title">模式</span>
+            <div class="segmented" id="modeTabs">
+              <button type="button" data-mode="browse">卡片模式</button>
+              <button type="button" data-mode="review">智慧複習</button>
+              <button type="button" data-mode="shadow">跟讀錄音</button>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <span class="control-title">分類</span>
+            <div class="segmented" id="categoryTabs">
+              <button type="button" data-category="all">全部</button>
+              <button type="button" data-category="greetings">打招呼</button>
+              <button type="button" data-category="numbers">數字</button>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <span class="control-title">語速</span>
+            <div class="speed-control">
+              <label for="speedSelect">日語語音速度</label>
+              <select id="speedSelect" aria-label="選擇語音速度">
+                <option value="0.5">慢速 0.5 倍</option>
+                <option value="1">普通 1 倍</option>
+                <option value="1.2">快速 1.2 倍</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="card-shell">
+            <div class="study-card" id="studyCard" role="button" tabindex="0" aria-live="polite" aria-label="點擊翻轉卡片">
+              <div class="card-inner">
+                <article class="card-face front">
+                  <div class="card-meta">
+                    <span class="card-tag" id="cardCategory">打招呼</span>
+                    <span id="cardPosition">1 / 18</span>
+                  </div>
+                  <div class="card-body">
+                    <p class="card-reading" id="cardModeLabel">卡片模式</p>
+                    <h2 class="card-word" id="frontWord">こんにちは</h2>
+                    <p class="card-reading" id="frontKana">かな：こんにちは</p>
+                    <p class="card-romaji" id="frontRomaji">romaji：konnichiwa</p>
+                    <p class="card-hint" id="frontHint">點一下卡片翻面，看中文與例句。</p>
+                  </div>
+                  <div class="card-speech">
+                    <button type="button" id="speakWordButton">朗讀單字</button>
+                    <button type="button" id="speakExampleButton">朗讀例句</button>
+                  </div>
+                </article>
+
+                <article class="card-face back">
+                  <div class="card-meta">
+                    <span class="card-tag" id="backBadge">中文與例句</span>
+                    <span id="cardBoxLabel">Box 1</span>
+                  </div>
+                  <div class="card-body">
+                    <p class="card-reading" id="backModeLabel">翻面後可以看中文與用法。</p>
+                    <h2 class="card-meaning" id="backMeaning">你好</h2>
+                    <p class="card-hint" id="backHint">例句會幫你把單字放進語境。</p>
+                    <div class="example-box">
+                      <strong>Example</strong>
+                      <p class="example-ja" id="exampleJa">こんにちは、山田さん。</p>
+                      <p class="example-zh" id="exampleZh">你好，山田先生。</p>
+                    </div>
+                  </div>
+                  <div class="card-speech">
+                    <button type="button" id="speakBackWordButton">再聽一次單字</button>
+                    <button type="button" id="speakBackExampleButton">再聽一次例句</button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions-bar">
+            <div class="secondary-actions">
+              <button type="button" id="prevButton">上一張</button>
+              <button type="button" id="nextButton">下一張</button>
+            </div>
+            <div class="primary-actions">
+              <button type="button" id="flipButton">翻卡</button>
+            </div>
+          </div>
+          <p class="status-text" id="statusText">
+            目前正在瀏覽全部卡片。點卡片可翻面，按語音按鈕可用 `ja-JP` 朗讀。
+          </p>
+        </div>
+      </div>
+
+      <aside class="side-stack">
+        <section class="mini-panel">
+          <h2>學習面板</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">今日待複習</span>
+              <span class="stat-value" id="statDue">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">本輪完成</span>
+              <span class="stat-value" id="statDone">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">連續答對</span>
+              <span class="stat-value" id="statStreak">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">最常忘記</span>
+              <span class="stat-value" id="statHardest">-</span>
+            </div>
+          </div>
+          <p id="studySummary">
+            智慧複習會把到期卡片混合練習，錯題會在同一輪稍後再出現。
+          </p>
+        </section>
+
+        <section class="mini-panel" id="reviewPanel">
+          <h3>智慧複習操作</h3>
+          <p id="reviewDescription">
+            先看正面自己回想，再翻面自評。這樣比只滑過卡片更能逼自己主動回想。
+          </p>
+          <div class="review-actions" id="reviewActions">
+            <button type="button" data-result="again">忘記了</button>
+            <button type="button" data-result="good">還可以</button>
+            <button type="button" class="primary" data-result="easy">記住了</button>
+          </div>
+          <div class="empty-state hidden" id="reviewEmptyState">
+            <p id="reviewEmptyText">今天的到期卡片都完成了，晚點再回來複習。</p>
+          </div>
+        </section>
+
+        <section class="mini-panel hidden" id="shadowPanel">
+          <h3>跟讀錄音鏡像</h3>
+          <p id="shadowDescription">
+            先聽示範，再自己唸一次。這一版不做自動評分，改用回放加自評，保持純前端與穩定性。
+          </p>
+          <div class="shadow-actions">
+            <button type="button" id="playShadowWordButton">播放單字</button>
+            <button type="button" id="playShadowExampleButton">播放例句</button>
+            <button type="button" class="primary" id="recordButton">開始錄音</button>
+            <button type="button" id="playRecordingButton">播放我的錄音</button>
+          </div>
+          <div class="record-indicator hidden" id="recordIndicator">
+            <span class="dot"></span>
+            <span>錄音中，最多 6 秒</span>
+          </div>
+          <p id="shadowStatus">先按「播放單字」，再按「開始錄音」。</p>
+          <div class="shadow-score-actions" id="shadowScoreActions">
+            <button type="button" data-score="retry">需再練</button>
+            <button type="button" data-score="ok">尚可</button>
+            <button type="button" class="primary" data-score="clear">清楚</button>
+          </div>
+        </section>
+
+        <section class="mini-panel">
+          <h3>這版的兩個獨特功能</h3>
+          <ol class="tips-list">
+            <li>智慧複習：把間隔複習、主動回想、錯題回鍋做成可持久化的本地練習。</li>
+            <li>跟讀錄音：結合瀏覽器語音播放與錄音回放，讓卡片不只看得到，還能說出口。</li>
+          </ol>
+        </section>
+      </aside>
+    </section>
+
+    <p class="footer-note">
+      建議使用 Chrome、Edge 或 Safari 開啟。若沒聽到朗讀，請改用最新版 Chrome 瀏覽器。若要穩定保存進度，請用靜態伺服器或 GitHub Pages 執行。
+    </p>
+  </main>
+
+  <script>
+    const STORAGE_KEYS = {
+      progress: "kotokoto-progress-v1",
+      settings: "kotokoto-settings-v1",
+    };
+
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const cards = [
+      {
+        id: "greet-ohayou",
+        category: "greetings",
+        word: "おはよう",
+        kana: "おはよう",
+        romaji: "ohayou",
+        zh: "早安",
+        exampleJa: "おはよう、田中さん。",
+        exampleZh: "早安，田中先生。",
+        speechText: "おはよう",
+      },
+      {
+        id: "greet-konnichiwa",
+        category: "greetings",
+        word: "こんにちは",
+        kana: "こんにちは",
+        romaji: "konnichiwa",
+        zh: "你好／午安",
+        exampleJa: "こんにちは、山田さん。",
+        exampleZh: "你好，山田先生。",
+        speechText: "こんにちは",
+      },
+      {
+        id: "greet-konbanwa",
+        category: "greetings",
+        word: "こんばんは",
+        kana: "こんばんは",
+        romaji: "konbanwa",
+        zh: "晚上好",
+        exampleJa: "こんばんは、みなさん。",
+        exampleZh: "各位晚上好。",
+        speechText: "こんばんは",
+      },
+      {
+        id: "greet-arigatou",
+        category: "greetings",
+        word: "ありがとう",
+        kana: "ありがとう",
+        romaji: "arigatou",
+        zh: "謝謝",
+        exampleJa: "手伝ってくれて、ありがとう。",
+        exampleZh: "謝謝你幫忙。",
+        speechText: "ありがとう",
+      },
+      {
+        id: "greet-sumimasen",
+        category: "greetings",
+        word: "すみません",
+        kana: "すみません",
+        romaji: "sumimasen",
+        zh: "不好意思／對不起",
+        exampleJa: "すみません、もう一回お願いします。",
+        exampleZh: "不好意思，請再說一次。",
+        speechText: "すみません",
+      },
+      {
+        id: "greet-hajimemashite",
+        category: "greetings",
+        word: "はじめまして",
+        kana: "はじめまして",
+        romaji: "hajimemashite",
+        zh: "初次見面",
+        exampleJa: "はじめまして、リンです。",
+        exampleZh: "初次見面，我是凜。",
+        speechText: "はじめまして",
+      },
+      {
+        id: "greet-sayounara",
+        category: "greetings",
+        word: "さようなら",
+        kana: "さようなら",
+        romaji: "sayounara",
+        zh: "再見",
+        exampleJa: "さようなら、また明日。",
+        exampleZh: "再見，明天見。",
+        speechText: "さようなら",
+      },
+      {
+        id: "greet-matane",
+        category: "greetings",
+        word: "またね",
+        kana: "またね",
+        romaji: "matane",
+        zh: "回頭見",
+        exampleJa: "じゃ、またね。",
+        exampleZh: "那就回頭見。",
+        speechText: "またね",
+      },
+      {
+        id: "num-ichi",
+        category: "numbers",
+        word: "いち",
+        kana: "いち",
+        romaji: "ichi",
+        zh: "一",
+        exampleJa: "りんごをいちつください。",
+        exampleZh: "請給我一顆蘋果。",
+        speechText: "いち",
+      },
+      {
+        id: "num-ni",
+        category: "numbers",
+        word: "に",
+        kana: "に",
+        romaji: "ni",
+        zh: "二",
+        exampleJa: "ねこがにひきいます。",
+        exampleZh: "有兩隻貓。",
+        speechText: "に",
+      },
+      {
+        id: "num-san",
+        category: "numbers",
+        word: "さん",
+        kana: "さん",
+        romaji: "san",
+        zh: "三",
+        exampleJa: "さんにんで行きます。",
+        exampleZh: "三個人一起去。",
+        speechText: "さん",
+      },
+      {
+        id: "num-yon",
+        category: "numbers",
+        word: "よん",
+        kana: "よん",
+        romaji: "yon",
+        zh: "四",
+        exampleJa: "よんじに会いましょう。",
+        exampleZh: "四點見吧。",
+        speechText: "よん",
+      },
+      {
+        id: "num-go",
+        category: "numbers",
+        word: "ご",
+        kana: "ご",
+        romaji: "go",
+        zh: "五",
+        exampleJa: "ごふん待ってください。",
+        exampleZh: "請等五分鐘。",
+        speechText: "ご",
+      },
+      {
+        id: "num-roku",
+        category: "numbers",
+        word: "ろく",
+        kana: "ろく",
+        romaji: "roku",
+        zh: "六",
+        exampleJa: "ろくページを見てください。",
+        exampleZh: "請看第六頁。",
+        speechText: "ろく",
+      },
+      {
+        id: "num-nana",
+        category: "numbers",
+        word: "なな",
+        kana: "なな",
+        romaji: "nana",
+        zh: "七",
+        exampleJa: "ななじに起きます。",
+        exampleZh: "我七點起床。",
+        speechText: "なな",
+      },
+      {
+        id: "num-hachi",
+        category: "numbers",
+        word: "はち",
+        kana: "はち",
+        romaji: "hachi",
+        zh: "八",
+        exampleJa: "はちにんのクラスです。",
+        exampleZh: "這是八人的班級。",
+        speechText: "はち",
+      },
+      {
+        id: "num-kyuu",
+        category: "numbers",
+        word: "きゅう",
+        kana: "きゅう",
+        romaji: "kyuu",
+        zh: "九",
+        exampleJa: "きゅうこ買いました。",
+        exampleZh: "我買了九個。",
+        speechText: "きゅう",
+      },
+      {
+        id: "num-juu",
+        category: "numbers",
+        word: "じゅう",
+        kana: "じゅう",
+        romaji: "juu",
+        zh: "十",
+        exampleJa: "じゅうぷん後に出ます。",
+        exampleZh: "十分鐘後出發。",
+        speechText: "じゅう",
+      },
+    ];
+
+    const categoryLabels = {
+      all: "全部",
+      greetings: "打招呼",
+      numbers: "數字",
+    };
+
+    const modeLabels = {
+      browse: "卡片模式",
+      review: "智慧複習",
+      shadow: "跟讀錄音",
+    };
+
+    const reviewLabelMap = {
+      again: "忘記了",
+      good: "還可以",
+      easy: "記住了",
+    };
+
+    const shadowScoreLabelMap = {
+      retry: "需再練",
+      ok: "尚可",
+      clear: "清楚",
+    };
+
+    const state = {
+      currentMode: "browse",
+      currentCategory: "all",
+      speechRate: 1,
+      currentCardIndex: 0,
+      isFlipped: false,
+      reviewProgress: {},
+      reviewQueue: [],
+      reviewCompleted: 0,
+      sessionStreak: 0,
+      reviewSessionSeed: 0,
+      shadow: {
+        isRecording: false,
+        mediaRecorder: null,
+        mediaStream: null,
+        chunks: [],
+        audioUrl: "",
+        autoStopTimer: null,
+        permission: "idle",
+      },
+      ttsVoice: null,
+    };
+
+    const els = {
+      modeTabs: document.getElementById("modeTabs"),
+      categoryTabs: document.getElementById("categoryTabs"),
+      speedSelect: document.getElementById("speedSelect"),
+      studyCard: document.getElementById("studyCard"),
+      flipButton: document.getElementById("flipButton"),
+      prevButton: document.getElementById("prevButton"),
+      nextButton: document.getElementById("nextButton"),
+      statusText: document.getElementById("statusText"),
+      cardCategory: document.getElementById("cardCategory"),
+      cardPosition: document.getElementById("cardPosition"),
+      cardModeLabel: document.getElementById("cardModeLabel"),
+      frontWord: document.getElementById("frontWord"),
+      frontKana: document.getElementById("frontKana"),
+      frontRomaji: document.getElementById("frontRomaji"),
+      frontHint: document.getElementById("frontHint"),
+      speakWordButton: document.getElementById("speakWordButton"),
+      speakExampleButton: document.getElementById("speakExampleButton"),
+      backBadge: document.getElementById("backBadge"),
+      cardBoxLabel: document.getElementById("cardBoxLabel"),
+      backModeLabel: document.getElementById("backModeLabel"),
+      backMeaning: document.getElementById("backMeaning"),
+      backHint: document.getElementById("backHint"),
+      exampleJa: document.getElementById("exampleJa"),
+      exampleZh: document.getElementById("exampleZh"),
+      speakBackWordButton: document.getElementById("speakBackWordButton"),
+      speakBackExampleButton: document.getElementById("speakBackExampleButton"),
+      statDue: document.getElementById("statDue"),
+      statDone: document.getElementById("statDone"),
+      statStreak: document.getElementById("statStreak"),
+      statHardest: document.getElementById("statHardest"),
+      studySummary: document.getElementById("studySummary"),
+      reviewPanel: document.getElementById("reviewPanel"),
+      reviewActions: document.getElementById("reviewActions"),
+      reviewDescription: document.getElementById("reviewDescription"),
+      reviewEmptyState: document.getElementById("reviewEmptyState"),
+      reviewEmptyText: document.getElementById("reviewEmptyText"),
+      shadowPanel: document.getElementById("shadowPanel"),
+      shadowDescription: document.getElementById("shadowDescription"),
+      playShadowWordButton: document.getElementById("playShadowWordButton"),
+      playShadowExampleButton: document.getElementById("playShadowExampleButton"),
+      recordButton: document.getElementById("recordButton"),
+      playRecordingButton: document.getElementById("playRecordingButton"),
+      recordIndicator: document.getElementById("recordIndicator"),
+      shadowStatus: document.getElementById("shadowStatus"),
+      shadowScoreActions: document.getElementById("shadowScoreActions"),
+    };
+
+    function createDefaultProgress() {
+      return cards.reduce((acc, card) => {
+        acc[card.id] = {
+          box: 1,
+          dueAt: new Date().toISOString(),
+          reviewedCount: 0,
+          lapseCount: 0,
+          lastResult: null,
+          lastReviewedAt: null,
+          lastShadowScore: null,
+          lastPracticedAt: null,
+          shadowPracticeCount: 0,
+        };
+        return acc;
+      }, {});
+    }
+
+    function loadState() {
+      const savedProgress = safeParse(localStorage.getItem(STORAGE_KEYS.progress));
+      const savedSettings = safeParse(localStorage.getItem(STORAGE_KEYS.settings));
+
+      state.reviewProgress = createDefaultProgress();
+      if (savedProgress) {
+        cards.forEach((card) => {
+          if (savedProgress[card.id]) {
+            state.reviewProgress[card.id] = {
+              ...state.reviewProgress[card.id],
+              ...savedProgress[card.id],
+            };
+          }
+        });
+      }
+
+      if (savedSettings) {
+        state.currentMode = savedSettings.currentMode || state.currentMode;
+        state.currentCategory = savedSettings.currentCategory || state.currentCategory;
+        state.speechRate = Number(savedSettings.speechRate) || state.speechRate;
+        state.currentCardIndex = Number(savedSettings.currentCardIndex) || 0;
+      }
+    }
+
+    function safeParse(raw) {
+      try {
+        return raw ? JSON.parse(raw) : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function saveProgress() {
+      localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(state.reviewProgress));
+    }
+
+    function saveSettings() {
+      localStorage.setItem(
+        STORAGE_KEYS.settings,
+        JSON.stringify({
+          currentMode: state.currentMode,
+          currentCategory: state.currentCategory,
+          speechRate: state.speechRate,
+          currentCardIndex: state.currentCardIndex,
+        })
+      );
+    }
+
+    function getFilteredCards() {
+      if (state.currentCategory === "all") {
+        return cards;
+      }
+      return cards.filter((card) => card.category === state.currentCategory);
+    }
+
+    function getBrowseOrShadowCard() {
+      const filtered = getFilteredCards();
+      if (!filtered.length) {
+        return null;
+      }
+      state.currentCardIndex = clamp(state.currentCardIndex, 0, filtered.length - 1);
+      return filtered[state.currentCardIndex];
+    }
+
+    function getReviewCard() {
+      const currentId = state.reviewQueue[0];
+      return cards.find((card) => card.id === currentId) || null;
+    }
+
+    function getActiveCard() {
+      return state.currentMode === "review" ? getReviewCard() : getBrowseOrShadowCard();
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function formatCardPosition(card) {
+      if (state.currentMode === "review") {
+        if (!card) {
+          return "0 / 0";
+        }
+        return `${state.reviewCompleted + 1} / ${state.reviewCompleted + state.reviewQueue.length}`;
+      }
+
+      const filtered = getFilteredCards();
+      return `${state.currentCardIndex + 1} / ${filtered.length}`;
+    }
+
+    function getCardProgress(cardId) {
+      return state.reviewProgress[cardId];
+    }
+
+    function getDueCards() {
+      const now = Date.now();
+      return cards.filter((card) => new Date(getCardProgress(card.id).dueAt).getTime() <= now);
+    }
+
+    function getNextDueCard() {
+      return cards
+        .slice()
+        .sort((a, b) => new Date(getCardProgress(a.id).dueAt) - new Date(getCardProgress(b.id).dueAt))[0] || null;
+    }
+
+    function shuffle(items) {
+      const next = items.slice();
+      for (let i = next.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [next[i], next[j]] = [next[j], next[i]];
+      }
+      return next;
+    }
+
+    function buildReviewQueue() {
+      const dueIds = getDueCards()
+        .map((card) => card.id)
+        .sort((a, b) => {
+          const progressA = getCardProgress(a);
+          const progressB = getCardProgress(b);
+          if (progressB.lapseCount !== progressA.lapseCount) {
+            return progressB.lapseCount - progressA.lapseCount;
+          }
+          if (progressA.box !== progressB.box) {
+            return progressA.box - progressB.box;
+          }
+          return progressA.reviewedCount - progressB.reviewedCount;
+        });
+
+      state.reviewQueue = shuffle(dueIds);
+      state.reviewCompleted = 0;
+      state.sessionStreak = 0;
+      state.reviewSessionSeed += 1;
+    }
+
+    function setMode(mode) {
+      if (state.currentMode === "shadow" && mode !== "shadow") {
+        if (state.shadow.isRecording) {
+          stopRecording();
+        }
+        cleanupShadowAudio();
+        releaseMediaStream();
+      }
+
+      state.currentMode = mode;
+      state.isFlipped = false;
+
+      if (mode === "review") {
+        buildReviewQueue();
+      }
+
+      saveSettings();
+      render();
+    }
+
+    function setCategory(category) {
+      state.currentCategory = category;
+      state.currentCardIndex = 0;
+      state.isFlipped = false;
+      saveSettings();
+      render();
+    }
+
+    function moveCard(step) {
+      if (state.currentMode === "review") {
+        return;
+      }
+
+      const filtered = getFilteredCards();
+      if (!filtered.length) {
+        return;
+      }
+
+      state.currentCardIndex = (state.currentCardIndex + step + filtered.length) % filtered.length;
+      state.isFlipped = false;
+      saveSettings();
+      render();
+    }
+
+    function toggleFlip() {
+      if (!getActiveCard()) {
+        return;
+      }
+      state.isFlipped = !state.isFlipped;
+      render();
+    }
+
+    function getSpeechVoice() {
+      const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+      state.ttsVoice = voices.find((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ja")) || null;
+    }
+
+    function speakText(text) {
+      if (!window.speechSynthesis || !text) {
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "ja-JP";
+      utterance.rate = state.speechRate;
+      if (state.ttsVoice) {
+        utterance.voice = state.ttsVoice;
+      }
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function render() {
+      const activeCard = getActiveCard();
+      renderTabs();
+      renderControls();
+      renderCard(activeCard);
+      renderStats();
+      renderModePanels(activeCard);
+      renderStatus(activeCard);
+      saveSettings();
+    }
+
+    function renderTabs() {
+      [...els.modeTabs.querySelectorAll("button")].forEach((button) => {
+        button.classList.toggle("active", button.dataset.mode === state.currentMode);
+      });
+
+      [...els.categoryTabs.querySelectorAll("button")].forEach((button) => {
+        button.classList.toggle("active", button.dataset.category === state.currentCategory);
+      });
+
+      els.speedSelect.value = String(state.speechRate);
+    }
+
+    function renderControls() {
+      const reviewMode = state.currentMode === "review";
+      els.prevButton.disabled = reviewMode;
+      els.nextButton.disabled = reviewMode;
+      els.prevButton.textContent = reviewMode ? "複習模式" : "上一張";
+      els.nextButton.textContent = reviewMode ? "等待自評" : "下一張";
+      els.flipButton.textContent = state.isFlipped ? "翻回正面" : "翻卡";
+      els.studyCard.classList.toggle("is-flipped", state.isFlipped);
+    }
+
+    function renderCard(card) {
+      if (!card) {
+        els.cardCategory.textContent = "休息時間";
+        els.cardPosition.textContent = "0 / 0";
+        els.cardModeLabel.textContent = modeLabels[state.currentMode];
+        els.frontWord.textContent = state.currentMode === "review" ? "今日複習完成" : "沒有卡片";
+        els.frontKana.textContent = "かな：-";
+        els.frontRomaji.textContent = "romaji：-";
+        els.frontHint.textContent = "稍後再回來，或切回卡片模式繼續瀏覽。";
+        els.backBadge.textContent = "提示";
+        els.cardBoxLabel.textContent = "Box -";
+        els.backModeLabel.textContent = "目前沒有可顯示的卡片。";
+        els.backMeaning.textContent = "休息一下";
+        els.backHint.textContent = "學習不必一次做完，固定回來複習更有效。";
+        els.exampleJa.textContent = "またあとで勉強しましょう。";
+        els.exampleZh.textContent = "晚點再來繼續學吧。";
+        return;
+      }
+
+      const progress = getCardProgress(card.id);
+      const categoryLabel = categoryLabels[card.category];
+
+      els.cardCategory.textContent = categoryLabel;
+      els.cardPosition.textContent = formatCardPosition(card);
+      els.cardModeLabel.textContent = modeLabels[state.currentMode];
+      els.frontWord.textContent = card.word;
+      els.frontKana.textContent = `かな：${card.kana}`;
+      els.frontRomaji.textContent = `romaji：${card.romaji}`;
+      els.backMeaning.textContent = card.zh;
+      els.exampleJa.textContent = card.exampleJa;
+      els.exampleZh.textContent = card.exampleZh;
+      els.cardBoxLabel.textContent = `Box ${progress.box}`;
+
+      if (state.currentMode === "browse") {
+        els.frontHint.textContent = "點一下卡片翻面，看中文與例句。";
+        els.backBadge.textContent = "中文與例句";
+        els.backModeLabel.textContent = "翻面後可以看中文與用法。";
+        els.backHint.textContent = "例句會幫你把單字放進語境。";
+      } else if (state.currentMode === "review") {
+        els.frontHint.textContent = "先在腦中回想中文，再翻面自評。";
+        els.backBadge.textContent = `上次結果：${progress.lastResult ? reviewLabelMap[progress.lastResult] : "還沒開始"}`;
+        els.backModeLabel.textContent = "翻面後請立刻自評，系統會安排下次複習時間。";
+        els.backHint.textContent = `已複習 ${progress.reviewedCount} 次，忘記 ${progress.lapseCount} 次。`;
+      } else {
+        const shadowScore = progress.lastShadowScore ? shadowScoreLabelMap[progress.lastShadowScore] : "尚未評分";
+        els.frontHint.textContent = "先聽示範，再錄下自己的聲音。";
+        els.backBadge.textContent = `上次口說：${shadowScore}`;
+        els.backModeLabel.textContent = "翻面後看中文與例句，再練一次。";
+        els.backHint.textContent = `已跟讀 ${progress.shadowPracticeCount} 次。`;
+      }
+    }
+
+    function renderStats() {
+      const dueCards = getDueCards();
+      const hardest = cards
+        .slice()
+        .sort((a, b) => getCardProgress(b.id).lapseCount - getCardProgress(a.id).lapseCount)[0];
+
+      els.statDue.textContent = String(dueCards.length);
+      els.statDone.textContent = String(state.reviewCompleted);
+      els.statStreak.textContent = String(state.sessionStreak);
+      els.statHardest.textContent = hardest && getCardProgress(hardest.id).lapseCount > 0 ? hardest.word : "-";
+
+      if (state.currentMode === "review") {
+        if (state.reviewQueue.length > 0) {
+          els.studySummary.textContent = "智慧複習固定混合全部分類。錯題會在本輪稍後回來，記住的卡才會真正延後到下次。";
+        } else {
+          const nextDue = getNextDueCard();
+          const nextDueText = nextDue
+            ? new Date(getCardProgress(nextDue.id).dueAt).toLocaleString("zh-TW", { hour12: false })
+            : "之後";
+          els.studySummary.textContent = `今天到期卡片已完成。下一張預計到期時間：${nextDueText}`;
+        }
+      } else if (state.currentMode === "shadow") {
+        els.studySummary.textContent = "跟讀錄音只把評分與練習次數存進本機；錄音檔本身不持久保存，保持純前端簡潔。";
+      } else {
+        els.studySummary.textContent = "卡片模式適合先建立印象；之後切到智慧複習與跟讀錄音，效果會更完整。";
+      }
+    }
+
+    function renderModePanels(card) {
+      const reviewMode = state.currentMode === "review";
+      const shadowMode = state.currentMode === "shadow";
+
+      els.reviewPanel.classList.toggle("hidden", shadowMode);
+      els.shadowPanel.classList.toggle("hidden", !shadowMode);
+      els.reviewActions.classList.toggle("hidden", !reviewMode || !state.isFlipped || !card);
+      els.reviewEmptyState.classList.toggle("hidden", !(reviewMode && !card));
+      els.recordIndicator.classList.toggle("hidden", !state.shadow.isRecording);
+      els.playRecordingButton.disabled = !state.shadow.audioUrl;
+      els.recordButton.textContent = state.shadow.isRecording ? "停止錄音" : "開始錄音";
+
+      if (reviewMode) {
+        els.reviewDescription.textContent = state.isFlipped
+          ? "看完答案後立刻自評。評分越誠實，複習排程越準。"
+          : "先不要偷翻。請先在心裡回想中文與例句情境，再翻卡。";
+        if (!card) {
+          const nextDue = getNextDueCard();
+          els.reviewEmptyText.textContent = nextDue
+            ? `今天的到期卡片都完成了。下一張卡片最早會在 ${new Date(getCardProgress(nextDue.id).dueAt).toLocaleString("zh-TW", { hour12: false })} 到期。`
+            : "今天的到期卡片都完成了。";
+        }
+      }
+
+      if (shadowMode && card) {
+        const progress = getCardProgress(card.id);
+        const lastScore = progress.lastShadowScore ? shadowScoreLabelMap[progress.lastShadowScore] : "尚未評分";
+        els.shadowDescription.textContent = `目前練習：${card.word}。上次口說自評：${lastScore}，總共跟讀 ${progress.shadowPracticeCount} 次。`;
+      }
+    }
+
+    function renderStatus(card) {
+      if (state.currentMode === "browse") {
+        els.statusText.textContent = `目前正在瀏覽「${categoryLabels[state.currentCategory]}」分類，共 ${getFilteredCards().length} 張卡。`;
+      } else if (state.currentMode === "review") {
+        if (card) {
+          const progress = getCardProgress(card.id);
+          const dueText = new Date(progress.dueAt).toLocaleString("zh-TW", { hour12: false });
+          els.statusText.textContent = `智慧複習固定使用全部分類。這張卡目前在 Box ${progress.box}，上次預定複習時間為 ${dueText}。`;
+        } else {
+          els.statusText.textContent = "今天的到期卡片都完成了。可以切回卡片模式，或去跟讀錄音再練一輪。";
+        }
+      } else if (card) {
+        const progress = getCardProgress(card.id);
+        const lastPractice = progress.lastPracticedAt
+          ? new Date(progress.lastPracticedAt).toLocaleString("zh-TW", { hour12: false })
+          : "還沒練過";
+        els.statusText.textContent = `跟讀錄音正在使用「${categoryLabels[state.currentCategory]}」分類。這張卡上次練習時間：${lastPractice}。`;
+      }
+    }
+
+    function getNextBoxAndDue(currentBox, result) {
+      if (result === "again") {
+        return {
+          box: 1,
+          dueAt: new Date().toISOString(),
+        };
+      }
+
+      const nextBox = result === "easy"
+        ? Math.min(currentBox + 1, 5)
+        : Math.min(currentBox + 1, 4);
+
+      const offsetDays = {
+        1: 0,
+        2: 1,
+        3: 3,
+        4: 7,
+        5: 14,
+      }[nextBox];
+
+      return {
+        box: nextBox,
+        dueAt: new Date(Date.now() + offsetDays * DAY_MS).toISOString(),
+      };
+    }
+
+    function rateReview(result) {
+      const card = getReviewCard();
+      if (!card) {
+        return;
+      }
+
+      const progress = getCardProgress(card.id);
+      const next = getNextBoxAndDue(progress.box, result);
+
+      progress.box = next.box;
+      progress.dueAt = next.dueAt;
+      progress.reviewedCount += 1;
+      progress.lastResult = result;
+      progress.lastReviewedAt = new Date().toISOString();
+
+      if (result === "again") {
+        progress.lapseCount += 1;
+        state.sessionStreak = 0;
+      } else {
+        state.sessionStreak += 1;
+      }
+
+      state.reviewQueue.shift();
+      state.reviewCompleted += 1;
+
+      if (result === "again") {
+        const insertIndex = Math.min(2, state.reviewQueue.length);
+        state.reviewQueue.splice(insertIndex, 0, card.id);
+      }
+
+      state.isFlipped = false;
+      saveProgress();
+      render();
+    }
+
+    function cleanupShadowAudio() {
+      if (state.shadow.audioUrl) {
+        URL.revokeObjectURL(state.shadow.audioUrl);
+        state.shadow.audioUrl = "";
+      }
+      if (state.shadow.autoStopTimer) {
+        clearTimeout(state.shadow.autoStopTimer);
+        state.shadow.autoStopTimer = null;
+      }
+      state.shadow.chunks = [];
+      state.shadow.isRecording = false;
+      state.shadow.mediaRecorder = null;
+    }
+
+    function releaseMediaStream() {
+      if (state.shadow.mediaStream) {
+        state.shadow.mediaStream.getTracks().forEach((track) => track.stop());
+        state.shadow.mediaStream = null;
+      }
+    }
+
+    async function ensureMediaStream() {
+      if (state.shadow.mediaStream) {
+        return state.shadow.mediaStream;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === "undefined") {
+        throw new Error("目前瀏覽器不支援錄音功能。");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      state.shadow.mediaStream = stream;
+      return stream;
+    }
+
+    async function toggleRecording() {
+      if (state.shadow.isRecording) {
+        stopRecording();
+        return;
+      }
+
+      try {
+        cleanupShadowAudio();
+        const stream = await ensureMediaStream();
+        state.shadow.permission = "granted";
+        state.shadow.chunks = [];
+
+        const recorder = new MediaRecorder(stream);
+        state.shadow.mediaRecorder = recorder;
+
+        recorder.addEventListener("dataavailable", (event) => {
+          if (event.data.size > 0) {
+            state.shadow.chunks.push(event.data);
+          }
+        });
+
+        recorder.addEventListener("stop", () => {
+          const blob = new Blob(state.shadow.chunks, { type: "audio/webm" });
+          if (blob.size > 0) {
+            state.shadow.audioUrl = URL.createObjectURL(blob);
+            els.shadowStatus.textContent = "錄音完成。先回放一次，再選擇自評。";
+          } else {
+            els.shadowStatus.textContent = "沒有錄到聲音，請再試一次。";
+          }
+          state.shadow.isRecording = false;
+          state.shadow.mediaRecorder = null;
+          render();
+        });
+
+        recorder.start();
+        state.shadow.isRecording = true;
+        els.shadowStatus.textContent = "錄音中，請直接跟著唸出來。";
+        state.shadow.autoStopTimer = setTimeout(() => {
+          stopRecording();
+        }, 6000);
+        render();
+      } catch (error) {
+        state.shadow.permission = "denied";
+        els.shadowStatus.textContent = error.message.includes("Permission")
+          ? "沒有取得麥克風權限，無法錄音。你仍然可以先聽示範練習。"
+          : error.message;
+        render();
+      }
+    }
+
+    function stopRecording() {
+      if (!state.shadow.mediaRecorder || state.shadow.mediaRecorder.state === "inactive") {
+        return;
+      }
+
+      if (state.shadow.autoStopTimer) {
+        clearTimeout(state.shadow.autoStopTimer);
+        state.shadow.autoStopTimer = null;
+      }
+
+      state.shadow.mediaRecorder.stop();
+      state.shadow.isRecording = false;
+      render();
+    }
+
+    function playRecording() {
+      if (!state.shadow.audioUrl) {
+        els.shadowStatus.textContent = "目前沒有可播放的錄音。";
+        return;
+      }
+
+      const audio = new Audio(state.shadow.audioUrl);
+      audio.play();
+      els.shadowStatus.textContent = "正在播放你的錄音，聽聽看節奏與清楚度。";
+    }
+
+    function rateShadow(score) {
+      const card = getBrowseOrShadowCard();
+      if (!card) {
+        return;
+      }
+
+      const progress = getCardProgress(card.id);
+      progress.lastShadowScore = score;
+      progress.lastPracticedAt = new Date().toISOString();
+      progress.shadowPracticeCount += 1;
+      saveProgress();
+      els.shadowStatus.textContent = `已記錄自評：${shadowScoreLabelMap[score]}。可以切下一張，或再練一次。`;
+      render();
+    }
+
+    function bindEvents() {
+      els.modeTabs.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-mode]");
+        if (!button) {
+          return;
+        }
+        setMode(button.dataset.mode);
+      });
+
+      els.categoryTabs.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-category]");
+        if (!button) {
+          return;
+        }
+        setCategory(button.dataset.category);
+      });
+
+      els.speedSelect.addEventListener("change", (event) => {
+        state.speechRate = Number(event.target.value);
+        saveSettings();
+      });
+
+      els.studyCard.addEventListener("click", toggleFlip);
+      els.studyCard.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggleFlip();
+        }
+      });
+      els.flipButton.addEventListener("click", toggleFlip);
+      els.prevButton.addEventListener("click", () => moveCard(-1));
+      els.nextButton.addEventListener("click", () => moveCard(1));
+
+      els.speakWordButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const card = getActiveCard();
+        if (card) {
+          speakText(card.speechText);
+        }
+      });
+
+      els.speakExampleButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const card = getActiveCard();
+        if (card) {
+          speakText(card.exampleJa);
+        }
+      });
+
+      els.speakBackWordButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const card = getActiveCard();
+        if (card) {
+          speakText(card.speechText);
+        }
+      });
+
+      els.speakBackExampleButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const card = getActiveCard();
+        if (card) {
+          speakText(card.exampleJa);
+        }
+      });
+
+      els.reviewActions.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-result]");
+        if (!button) {
+          return;
+        }
+        rateReview(button.dataset.result);
+      });
+
+      els.playShadowWordButton.addEventListener("click", () => {
+        const card = getBrowseOrShadowCard();
+        if (card) {
+          speakText(card.speechText);
+          els.shadowStatus.textContent = "已播放單字示範。輪到你跟讀了。";
+        }
+      });
+
+      els.playShadowExampleButton.addEventListener("click", () => {
+        const card = getBrowseOrShadowCard();
+        if (card) {
+          speakText(card.exampleJa);
+          els.shadowStatus.textContent = "已播放例句示範。可以跟著完整句子練。";
+        }
+      });
+
+      els.recordButton.addEventListener("click", toggleRecording);
+      els.playRecordingButton.addEventListener("click", playRecording);
+
+      els.shadowScoreActions.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-score]");
+        if (!button) {
+          return;
+        }
+        rateShadow(button.dataset.score);
+      });
+
+      window.addEventListener("beforeunload", () => {
+        cleanupShadowAudio();
+        releaseMediaStream();
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+      });
+
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = getSpeechVoice;
+      }
+    }
+
+    function init() {
+      loadState();
+      getSpeechVoice();
+      bindEvents();
+
+      if (state.currentMode === "review") {
+        buildReviewQueue();
+      }
+
+      render();
+    }
+
+    init();
+  </script>
+</body>
+</html>
